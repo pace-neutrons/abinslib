@@ -1,0 +1,45 @@
+configfile: "config/config.yml"
+
+rule all:
+   input:
+       "results/GaSb_qpoint_phonon_modes.json",
+        "results/ethanol-phonopy.yaml",       
+
+rule phonon_to_json:
+    """Convert CASTEP .phonon file to Euphonic JSON"""
+    input:
+        "data/{label}.phonon"
+    output:
+        "results/{label}_qpoint_phonon_modes.json"
+    conda:
+        "envs/mantid.yml"
+    script:
+        "scripts/phonon_to_json.py"
+
+rule mlip_ethanol_opt:
+    """Get optimised ethanol molecule using MLIP"""
+    output:
+        "results/ethanol-opt.traj",
+        "results/ethanol-opt.extxyz",
+    conda:
+        "envs/mlip.yml"
+    params:
+        calc_params=config["calc_params"]
+    script:
+        "scripts/opt_ethanol.py"
+
+rule mlip_ethanol_phonon:
+    """Get MLIP phonons from structure"""
+    output:
+        "results/{label}-phonopy.yaml",
+        "results/{label}-force_constants.hdf5",
+    input:
+        "results/{label}-opt.extxyz",
+    conda:
+        "envs/mlip.yml"    
+    params:
+        label=(lambda w: w["label"]),
+        calc_params=config["calc_params"],
+        displacement=1e-3,
+    script:
+        "scripts/mlip_phonons.py"
