@@ -1,5 +1,6 @@
-# Snakemake resources
+# Snakemake resources and results
 .snakemake/
+dev/phonon_data/results/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
