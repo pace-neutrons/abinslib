@@ -1,3 +1,5 @@
+[![Run tests](https://github.com/pace-neutrons/abins-lib/actions/workflows/test.yml/badge.svg)](https://github.com/pace-neutrons/abins-lib/actions/workflows/test.yml)
+
 # abins-lib
 Dynamical structure factor calculations
 
