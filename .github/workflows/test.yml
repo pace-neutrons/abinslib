@@ -1,0 +1,32 @@
+name: Run tests
+
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request:
+    types: [opened, reopened, labeled, synchronize]
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        python_version: [3.11, 3.14]
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python_version }}
+
+      - name: Install package
+        shell: bash -el {0}
+        run: |
+          pip install .[test]
+
+      - name: Test with pytest
+        shell: bash -el {0}
+        run: |
+          pytest
