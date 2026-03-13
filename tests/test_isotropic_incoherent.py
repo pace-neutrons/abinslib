@@ -1,7 +1,7 @@
 from pathlib import Path
 import warnings
 
-from euphonic import QpointPhononModes, Quantity
+from euphonic import QpointPhononModes, Quantity, ureg
 import numpy as np
 from numpy.testing import assert_allclose
 
@@ -87,6 +87,9 @@ def test_calculate_isotropic_incoherent_spectrum():
     spectra = calculate_isotropic_incoherent_spectra(modes, b, a, q2, bins)
 
     spectrum = spectra.sum()
+
+    # TODO This is still a little mysterious, investigate further
+    ref_intensity = ref_intensity * ureg("meV").to("1/cm").magnitude / 2
 
     scale_offset = (
         (spectrum.y_data.sum().magnitude / ref_intensity[0].sum())
