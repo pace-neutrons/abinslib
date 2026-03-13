@@ -6,50 +6,17 @@ from euphonic import ureg, DebyeWaller, Quantity
 from euphonic.spectra import Spectrum1DCollection
 import numpy as np
 
+from .bose import BoseOccupation, calculate_bose_factor
+
 if TYPE_CHECKING:
     from euphonic import QpointPhononModes
-
-
-class BoseOccupation(Enum):
-    """Occupation number for Bose-Einstein statistics
-
-    Typically we use 2N+1 in Debye-Waller factor (i.e. atomic displacements),
-    N+1 for energy transfer to the sample and N for energy transfer from the
-    sample.
-    """
-
-    N = auto()
-    N_PLUS_ONE = auto()
-    TWO_N_PLUS_ONE = auto()
-
-
-def calculate_bose_factor(
-    frequencies: Quantity,
-    temperature: Quantity,
-    occupation: BoseOccupation,
-) -> np.array:
-    """Get Bose factors corresponding to an array of frequency or energy"""
-
-    frequencies = frequencies.to("hartree").magnitude
-    kT = (ureg.k * temperature).to("hartree").magnitude
-
-    two_n_plus_one = 1 / (np.tanh(frequencies / (2 * kT)))
-
-    match occupation:
-        case BoseOccupation.TWO_N_PLUS_ONE:
-            return two_n_plus_one
-        case BoseOccupation.N_PLUS_ONE:
-            return two_n_plus_one * 0.5 + 0.5
-        case BoseOccupation.N:
-            return two_n_plus_one * 0.5 - 0.5
-        case other:
-            raise ValueError(f"Not a valid occupation number: {other}")
 
 
 def calculate_mode_displacements(
     modes: QpointPhononModes,
     temperature: Quantity,
     frequency_min: Quantity = Quantity(0.01, "meV"),
+    occupation: BoseOccupation = BoseOccupation.TWO_N_PLUS_ONE,
 ) -> Quantity:
     """Get the 3x3 displacement tensor (B) for each atom and phonon mode
 
@@ -68,7 +35,7 @@ def calculate_mode_displacements(
         bose_factor = calculate_bose_factor(
             modes.frequencies,
             temperature,
-            BoseOccupation.TWO_N_PLUS_ONE,
+            occupation=occupation,
         )
     else:
         bose_factor = 1.0
@@ -174,6 +141,18 @@ def calculate_isotropic_incoherent_spectra(
     nominal_q2: Quantity,
     bins: Quantity,
 ) -> Spectrum1DCollection:
+    """Calculate INS intensities in fully-isotropic incoherent approximation
+
+    Note that to give expected results, mode_displacements should have N+1 Bose
+    occupation and atomic_displacements should have 2N+1 occupation.
+
+    Actual q-points of phonon modes will be disregarded; instead each mode
+    intensity will be based on a separate array of nominal Q^2 values
+    corresponding to modes. This is intended to approximate powder-averaging
+    with kinematic constraints: for indirect geometry the energy-Q^2
+    relationship can be determined using abinslib.utils.calculate_indirect_q2.
+
+    """
 
     intensities = calculate_isotropic_incoherent_fundamentals(
         modes=modes,
