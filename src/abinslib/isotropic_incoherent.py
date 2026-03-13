@@ -17,6 +17,7 @@ class BoseOccupation(Enum):
     N+1 for energy transfer to the sample and N for energy transfer from the
     sample.
     """
+
     N = auto()
     N_PLUS_ONE = auto()
     TWO_N_PLUS_ONE = auto()
@@ -58,9 +59,7 @@ def calculate_mode_displacements(
     QpointPhononModes.calculate_debye_waller
 
     """
-    k_B = (1 * ureg.k).to("hartree/K").magnitude
     frequencies = modes.frequencies.to("hartree").magnitude
-    temperature_k = temperature.to("K").magnitude
 
     # Boolean mask of modes to include (i.e. frequency over threshold)
     mask = frequencies > frequency_min.to("hartree").magnitude
@@ -72,7 +71,7 @@ def calculate_mode_displacements(
             BoseOccupation.TWO_N_PLUS_ONE,
         )
     else:
-        bose_factor = 1.
+        bose_factor = 1.0
 
     freq_term = bose_factor / frequencies
 
@@ -194,7 +193,9 @@ def calculate_isotropic_incoherent_spectra(
         collection="BlueBook", physical_property="incoherent_cross_section"
     )
     cross_sections = [
-        xs_coh_data[symbol].to("barn").magnitude + xs_inc_data[symbol].to("barn").magnitude for symbol in modes.crystal.atom_type
+        xs_coh_data[symbol].to("barn").magnitude
+        + xs_inc_data[symbol].to("barn").magnitude
+        for symbol in modes.crystal.atom_type
     ]
 
     q_weights = modes.weights / modes.weights.sum()

@@ -5,7 +5,9 @@ import numpy as np
 from numpy.testing import assert_allclose
 
 from abinslib.isotropic_incoherent import (
+    BoseOccupation,
     calculate_atomic_displacements,
+    calculate_bose_factor,
     calculate_mode_displacements,
     calculate_isotropic_incoherent_fundamentals,
     calculate_isotropic_incoherent_spectra,
@@ -52,7 +54,7 @@ def test_calculate_isotropic_incoherent_fundamentals():
 
 
 def test_calculate_isotropic_incoherent_spectrum():
-    TEMPERATURE_K = 10
+    temperature = Quantity(10, "K")
     ref_data = np.load(test_data / "GaSb_abins_isotropic_raw.npz")
 
     bins = Quantity(ref_data["energy"], str(ref_data["energy_unit"]))
@@ -61,10 +63,19 @@ def test_calculate_isotropic_incoherent_spectrum():
     modes = QpointPhononModes.from_json_file(
         test_data / "GaSb_qpoint_phonon_modes.json"
     )
-    b = calculate_mode_displacements(modes, temperature=Quantity(TEMPERATURE_K, "K"))
+    b = calculate_mode_displacements(modes, temperature=temperature)
     a = calculate_atomic_displacements(
-        modes, temperature=Quantity(TEMPERATURE_K, "K"), mode_displacements=b
+        modes, temperature=temperature, mode_displacements=b
     )
+
+    # Those mode displacements are with 2n+1 statistics, but we want n+1
+    two_n_plus_one = calculate_bose_factor(
+        modes.frequencies,
+        temperature,
+        BoseOccupation.TWO_N_PLUS_ONE,
+    )
+    n_plus_one = two_n_plus_one * 0.5 + 0.5
+    b = b * (n_plus_one / two_n_plus_one)[:, :, None, None, None]
 
     q2 = calculate_indirect_q2(
         modes.frequencies,
