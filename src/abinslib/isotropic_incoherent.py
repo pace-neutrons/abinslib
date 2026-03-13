@@ -1,4 +1,5 @@
 from __future__ import annotations
+from enum import auto, Enum
 from typing import TYPE_CHECKING
 
 from euphonic import ureg, DebyeWaller, Quantity
@@ -7,6 +8,41 @@ import numpy as np
 
 if TYPE_CHECKING:
     from euphonic import QpointPhononModes
+
+
+class BoseOccupation(Enum):
+    """Occupation number for Bose-Einstein statistics
+
+    Typically we use 2N+1 in Debye-Waller factor (i.e. atomic displacements),
+    N+1 for energy transfer to the sample and N for energy transfer from the
+    sample.
+    """
+    N = auto()
+    N_PLUS_ONE = auto()
+    TWO_N_PLUS_ONE = auto()
+
+
+def calculate_bose_factor(
+    frequencies: Quantity,
+    temperature: Quantity,
+    occupation: BoseOccupation,
+) -> np.array:
+    """Get Bose factors corresponding to an array of frequency or energy"""
+
+    frequencies = frequencies.to("hartree").magnitude
+    kT = (ureg.k * temperature).to("hartree").magnitude
+
+    two_n_plus_one = 1 / (np.tanh(frequencies / (2 * kT)))
+
+    match occupation:
+        case BoseOccupation.TWO_N_PLUS_ONE:
+            return two_n_plus_one
+        case BoseOccupation.N_PLUS_ONE:
+            return two_n_plus_one * 0.5 + 0.5
+        case BoseOccupation.N:
+            return two_n_plus_one * 0.5 - 0.5
+        case other:
+            raise ValueError(f"Not a valid occupation number: {other}")
 
 
 def calculate_mode_displacements(
@@ -30,10 +66,15 @@ def calculate_mode_displacements(
     mask = frequencies > frequency_min.to("hartree").magnitude
 
     if temperature > Quantity(0.0, "kelvin"):
-        x = frequencies / (2 * k_B * temperature_k)
-        freq_term = 1 / (frequencies * np.tanh(x))
+        bose_factor = calculate_bose_factor(
+            modes.frequencies,
+            temperature,
+            BoseOccupation.TWO_N_PLUS_ONE,
+        )
     else:
-        freq_term = 1 / frequencies
+        bose_factor = 1.
+
+    freq_term = bose_factor / frequencies
 
     mode_displacements = np.zeros(
         [*modes.frequencies.shape, modes.crystal.n_atoms, 3, 3]
