@@ -1,4 +1,5 @@
 from pathlib import Path
+import warnings
 
 from euphonic import QpointPhononModes, Quantity
 import numpy as np
@@ -87,9 +88,16 @@ def test_calculate_isotropic_incoherent_spectrum():
 
     spectrum = spectra.sum()
 
+    scale_offset = (
+        (spectrum.y_data.sum().magnitude / ref_intensity[0].sum())
+    )
+    if not (0.95 < scale_offset < 1.05):
+        msg = f"Overall magnitude different from AbINS: {scale_offset * 100:.1f}%"
+        warnings.warn(msg)
+
     # Compare normalized spectra for now
     assert_allclose(
-        spectrum.y_data / spectrum.y_data.sum(),
-        ref_intensity[0] / ref_intensity[0].sum(),
+        spectrum.y_data.magnitude,
+        ref_intensity[0] * scale_offset,
         rtol=0.01,
     )

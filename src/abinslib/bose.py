@@ -1,5 +1,11 @@
 """Bose occupation calculations"""
 
+from enum import Enum, auto
+
+from euphonic import Quantity, ureg
+import numpy as np
+
+
 class BoseOccupation(Enum):
     """Occupation number for Bose-Einstein statistics
 
@@ -34,4 +40,3 @@ def calculate_bose_factor(
             return two_n_plus_one * 0.5 - 0.5
         case other:
             raise ValueError(f"Not a valid occupation number: {other}")
-

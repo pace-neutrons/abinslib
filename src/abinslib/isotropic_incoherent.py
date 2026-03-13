@@ -1,5 +1,4 @@
 from __future__ import annotations
-from enum import auto, Enum
 from typing import TYPE_CHECKING
 
 from euphonic import ureg, DebyeWaller, Quantity
