@@ -11,6 +11,7 @@ from abinslib.isotropic_incoherent import (
     calculate_atomic_displacements,
     calculate_bose_factor,
     calculate_mode_displacements,
+    calculate_isotropic_dw_factor,
     calculate_isotropic_incoherent_fundamentals,
     calculate_isotropic_incoherent_spectra,
 )
@@ -121,6 +122,21 @@ def test_calculate_isotropic_incoherent_spectrum(temperature_k):
         rtol=0.01,
     )
 
+    if temperature_k == 100:
+        dw_data = np.load(test_data / "GaSb_abins_isotropic_dw.npz")
+        binned_q2 = calculate_indirect_q2(
+            0.5 * (bins[:-1] + bins[1:]),
+            angle=(134.98885653282196 * np.pi / 180),
+            final_energy=Quantity(32.0, "1/cm").to("meV"),
+        )
+
+        assert_allclose(binned_q2, dw_data["q2"])
+
+        binned_dw_factor = calculate_isotropic_dw_factor(
+            a, binned_q2[None, :]
+        )
+        assert_allclose(binned_dw_factor[0], dw_data["iso_dw"].transpose(), rtol=1e-6)
+
 
 def test_a_abins_ref() -> None:
     """Check calculated A against Abins isotropic calculation
@@ -134,11 +150,11 @@ def test_a_abins_ref() -> None:
         str(test_data / "GaSb_qpoint_phonon_modes.json")
     )
 
-    dw = calculate_atomic_displacements(modes, temperature=Quantity(100, "K"))
-    abins_average_a_traces = np.array([0.01321831, 0.01127088])
+    ref_a_traces = np.load(test_data / "GaSb_abins_isotropic_dw.npz")["a_traces"]
 
+    dw = calculate_atomic_displacements(modes, temperature=Quantity(100, "K"))
     assert_allclose(np.trace(dw.debye_waller.to("angstrom^2").magnitude, axis1=1, axis2=2),
-                    abins_average_a_traces / 2,
+                    ref_a_traces / 2,
                     atol=1e-8)
 
 
@@ -217,3 +233,4 @@ def test_displacements_abins_ref() -> None:
 #   [0., 0., 0., 0.00193254, 0.00193254, 0.00192238]]
 #  [[0.0174369,  0.01732897, 0.00349493, 0.00698129, 0.00583648, 0.00583332],
 #   [0.01643643, 0.01628717, 0.0055592,  0.00143936, 0.0020362,  0.00202893]]]
+

@@ -92,10 +92,11 @@ def calculate_atomic_displacements(
             modes=modes, temperature=temperature
         )
 
-    mode_displacements = mode_displacements / 2
-
-    dw = np.einsum("ijklm,i->klm", mode_displacements.magnitude, modes.weights)
-    # dw /= 2  # B values have same scaling as Mantid Abins, but this dw = A/2
+    dw = np.einsum(
+        "ijklm,i->klm",
+        mode_displacements.magnitude,
+        modes.weights * 0.5,  # q-point symm weights, /2 scale convention for W
+    )
 
     return DebyeWaller(
         modes.crystal, Quantity(dw, mode_displacements.units), temperature
@@ -124,19 +125,23 @@ def calculate_isotropic_incoherent_fundamentals(
         * np.trace(mode_displacements.to("bohr^2").magnitude, axis1=-2, axis2=-1)
         / 3
     )
-    import warnings
-    warnings.warn(str(intensities))
+    dw_factor = calculate_isotropic_dw_factor(atomic_displacements, nominal_q2)
 
+    return intensities * dw_factor
+
+
+def calculate_isotropic_dw_factor(
+    atomic_displacements: DebyeWaller,
+    q2: Quantity,
+):
     dw = atomic_displacements.debye_waller.to("bohr^2").magnitude
 
-    dw_factor = np.exp(
+    return np.exp(
         -2  # Mantid incorporates this factor 2 into A
-        * nominal_q2.to("bohr^-2").magnitude[:, :, None]
+        * q2.to("bohr^-2").magnitude[:, :, None]
         * np.trace(dw, axis1=-2, axis2=-1)[None, None, :]
         / 3
     )
-
-    return intensities * dw_factor
 
 
 def calculate_isotropic_incoherent_spectra(
