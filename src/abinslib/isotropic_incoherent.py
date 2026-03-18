@@ -37,6 +37,7 @@ def calculate_mode_displacements(
             occupation=occupation,
         )
     else:
+        # Actually this is incorrect for N (phonon emission) statistics
         bose_factor = 1.0
 
     freq_term = bose_factor / frequencies
@@ -55,7 +56,7 @@ def calculate_mode_displacements(
 
         mode_displacements[q_index] = np.einsum(
             "j,i,i,ijkl->ijkl",
-            1 / (4 * modes.crystal.atom_mass.to("m_e").magnitude),
+            1 / (2 * modes.crystal.atom_mass.to("m_e").magnitude),
             freq_term[q_index],
             mask[q_index],
             evec_term,
@@ -91,7 +92,10 @@ def calculate_atomic_displacements(
             modes=modes, temperature=temperature
         )
 
+    mode_displacements = mode_displacements / 2
+
     dw = np.einsum("ijklm,i->klm", mode_displacements.magnitude, modes.weights)
+    # dw /= 2  # B values have same scaling as Mantid Abins, but this dw = A/2
 
     return DebyeWaller(
         modes.crystal, Quantity(dw, mode_displacements.units), temperature
@@ -115,17 +119,19 @@ def calculate_isotropic_incoherent_fundamentals(
     Return array indices (qpt, mode, atom)
 
     """
-
     intensities = (
         nominal_q2.to("bohr^-2").magnitude[:, :, None]
         * np.trace(mode_displacements.to("bohr^2").magnitude, axis1=-2, axis2=-1)
         / 3
     )
+    import warnings
+    warnings.warn(str(intensities))
 
     dw = atomic_displacements.debye_waller.to("bohr^2").magnitude
 
     dw_factor = np.exp(
-        -nominal_q2.to("bohr^-2").magnitude[:, :, None]
+        -2  # Mantid incorporates this factor 2 into A
+        * nominal_q2.to("bohr^-2").magnitude[:, :, None]
         * np.trace(dw, axis1=-2, axis2=-1)[None, None, :]
         / 3
     )

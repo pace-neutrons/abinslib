@@ -1,13 +1,15 @@
 configfile: "config/config.yml"
 
-SYSTEMS = ["GaSb", "ethanol"]
+SYSTEMS = ["GaSb",
+           "ethanol",
+           ]
 
 rule all:
    input:
        expand("results/{label}_qpoint_phonon_modes.json", label=SYSTEMS),
        expand("results/{label}_abins.npz", label=SYSTEMS),
        expand("results/{label}_abins_raw.npz", label=SYSTEMS),
-       expand("results/{label}_abins_isotropic_raw.npz", label=SYSTEMS),       
+       expand("results/{label}_abins_{temperature}k_isotropic_raw.npz", label=SYSTEMS, temperature=[10, 100]),
 
 rule phonon_to_json:
     """Convert CASTEP .phonon file to Euphonic JSON"""
@@ -101,7 +103,7 @@ rule abins_tosca_raw:
 rule abins_tosca_isotropic_raw:
     """Get fully-isotropic fundamental TOSCA spectrum without broadening"""
     output:
-        "results/{label}_abins_isotropic_raw.npz"
+        "results/{label}_abins_{temperature}k_isotropic_raw.npz"
     input:
         "results/{label}_qpoint_phonon_modes.json"
     conda:
@@ -109,6 +111,9 @@ rule abins_tosca_isotropic_raw:
     params:
         isotropic=True,
         raw=True,
-        abins_kwargs=(abins_tosca_kwargs | config["abins_kwargs"]),
+        abins_kwargs=(lambda w: (
+            abins_tosca_kwargs
+            | config["abins_kwargs"]
+            | {"TemperatureInKelvin": w["temperature"]})),
     script:
         "scripts/run_abins.py"
