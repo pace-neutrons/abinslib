@@ -9,7 +9,6 @@ import pytest
 from abinslib.isotropic_incoherent import (
     BoseOccupation,
     calculate_atomic_displacements,
-    calculate_bose_factor,
     calculate_mode_displacements,
     calculate_isotropic_dw_factor,
     calculate_isotropic_incoherent_fundamentals,
@@ -19,6 +18,93 @@ from abinslib.util import calculate_indirect_q2
 
 
 test_data = Path(__file__).parent / "data"
+
+# Raw intensity values from Abins _calculate_order_one (i.e. pre-DW)
+abins_fundamentals_no_dw = [
+    (
+        0,
+        Quantity(np.load(test_data / "GaSb_modes_q2.npy"), "angstrom^-2"),
+        np.array(
+            [
+                [
+                    [0.0, 0.0, 0.0, 0.00566968, 0.00566967, 0.00564963],
+                    [0.0, 0.0, 0.0, 0.00185884, 0.00185884, 0.00185173],
+                ],
+                [
+                    [
+                        0.00773538,
+                        0.0077202,
+                        0.00293306,
+                        0.00666757,
+                        0.00559242,
+                        0.00559219,
+                    ],
+                    [
+                        0.00729155,
+                        0.00725607,
+                        0.00466545,
+                        0.00137468,
+                        0.00195106,
+                        0.00194506,
+                    ],
+                ],
+            ]
+        ),
+    ),
+    # Nominal Q^2=1. used for Mantid-Abins fully-isotropic calculations
+    # (energy-dependent scale factor applied as a later step)
+    (
+        0,
+        Quantity(np.ones([2, 6]), "angstrom^-2"),
+        [
+            [
+                [0.0, 0.0, 0.0, 0.00022573, 0.00022573, 0.00022323],
+                [0.0, 0.0, 0.0, 7.40083172e-05, 7.40083087e-05, 7.31655322e-05],
+            ],
+            [
+                [0.0007474, 0.00074444, 0.00016793, 0.0002748, 0.00022698, 0.00022642],
+                [
+                    7.04520332e-04,
+                    6.99689704e-04,
+                    2.67115967e-04,
+                    5.66576074e-05,
+                    7.91891594e-05,
+                    7.87544076e-05,
+                ],
+            ],
+        ],
+    ),
+    (
+        100,
+        Quantity(np.load(test_data / "GaSb_modes_q2.npy"), "angstrom^-2"),
+        np.array(
+            [
+                [
+                    [0.0, 0.0, 0.0, 0.00589447, 0.00589447, 0.00586518],
+                    [0.0, 0.0, 0.0, 0.00193254, 0.00193254, 0.00192238],
+                ],
+                [
+                    [
+                        0.0174369,
+                        0.01732897,
+                        0.00349493,
+                        0.00698129,
+                        0.00583648,
+                        0.00583332,
+                    ],
+                    [
+                        0.01643643,
+                        0.01628717,
+                        0.0055592,
+                        0.00143936,
+                        0.0020362,
+                        0.00202893,
+                    ],
+                ],
+            ]
+        ),
+    ),
+]
 
 
 @pytest.fixture(scope="module")
@@ -60,24 +146,42 @@ def test_calculate_adp(gasb_modes):
     # Values from abins isotropic DW calculation
     abins_average_a_traces = np.array([0.01321831, 0.01127088])
 
-    assert_allclose(np.trace(dw.debye_waller.to("angstrom^2").magnitude, axis1=1, axis2=2),
-                    abins_average_a_traces / 2,
-                    atol=1e-8)
+    assert_allclose(
+        np.trace(dw.debye_waller.to("angstrom^2").magnitude, axis1=1, axis2=2),
+        abins_average_a_traces / 2,
+        atol=1e-8,
+    )
 
 
-def test_calculate_isotropic_incoherent_fundamentals(gasb_modes):
-    b = calculate_mode_displacements(gasb_modes, temperature=Quantity(100, "K"))
+@pytest.mark.parametrize("temperature_k,q2,abins_ref", abins_fundamentals_no_dw)
+def test_calculate_isotropic_incoherent_fundamentals(
+    gasb_modes, temperature_k, q2, abins_ref
+):
+    temperature = Quantity(temperature_k, "K")
+    b = calculate_mode_displacements(
+        gasb_modes, temperature=temperature, occupation=BoseOccupation.N_PLUS_ONE
+    )
+
     a = calculate_atomic_displacements(
-        gasb_modes, temperature=Quantity(100, "K"), mode_displacements=b
+        gasb_modes,
+        temperature=temperature,
+        mode_displacements=calculate_mode_displacements(
+            gasb_modes,
+            temperature=temperature,
+            occupation=BoseOccupation.TWO_N_PLUS_ONE,
+        ),
     )
 
-    calculate_isotropic_incoherent_fundamentals(
-        gasb_modes, b, a, Quantity(np.ones_like(gasb_modes.frequencies), "angstrom^-2")
-    )
-    # No reference data yet, just check it doesn't raise an error!
+    result = calculate_isotropic_incoherent_fundamentals(gasb_modes, b, a, q2)
+    # Remove DW scaling to compare with Abins pre-DW intensities
+    dw_factor = calculate_isotropic_dw_factor(a, q2)
+    result /= dw_factor
+
+    abins_ref = np.swapaxes(abins_ref, -1, -2)
+    assert_allclose(result, abins_ref, rtol=1e-5, atol=1e-8)
 
 
-@pytest.mark.parametrize('temperature_k', [10, 100])
+@pytest.mark.parametrize("temperature_k", [10, 100])
 def test_calculate_isotropic_incoherent_spectrum(temperature_k, gasb_modes):
     temperature = Quantity(temperature_k, "K")
     ref_data = np.load(test_data / f"GaSb_abins_{temperature_k}k_isotropic_raw.npz")
@@ -86,28 +190,27 @@ def test_calculate_isotropic_incoherent_spectrum(temperature_k, gasb_modes):
     ref_intensity = ref_data["intensity"]
 
     n_plus_one_b = calculate_mode_displacements(
-        gasb_modes, temperature=temperature, occupation=BoseOccupation.N_PLUS_ONE)
+        gasb_modes, temperature=temperature, occupation=BoseOccupation.N_PLUS_ONE
+    )
     two_n_plus_one_b = calculate_mode_displacements(
-        gasb_modes, temperature=temperature, occupation=BoseOccupation.TWO_N_PLUS_ONE)
+        gasb_modes, temperature=temperature, occupation=BoseOccupation.TWO_N_PLUS_ONE
+    )
     a = calculate_atomic_displacements(
         gasb_modes, temperature=temperature, mode_displacements=two_n_plus_one_b
     )
 
-    q2 = calculate_indirect_q2(
-        gasb_modes.frequencies,
-        angle=(134.98885653282196 * np.pi / 180),
-        final_energy=Quantity(32.0, "1/cm").to("meV"),
-    )
+    # Q2 calculated at exact Mantid-Abins TOSCA backscattering angle
+    q2 = Quantity(np.load(test_data / "GaSb_modes_q2.npy"), "angstrom^-2")
 
-    spectra = calculate_isotropic_incoherent_spectra(gasb_modes, n_plus_one_b, a, q2, bins)
+    spectra = calculate_isotropic_incoherent_spectra(
+        gasb_modes, n_plus_one_b, a, q2, bins
+    )
 
     spectrum = spectra.sum()
 
     # TODO This is still a little mysterious, investigate further.
     # We seem to differ by a factor ~8?
-    scale_offset = (
-        spectrum.y_data.sum().magnitude / ref_intensity[0].sum()
-    )
+    scale_offset = spectrum.y_data.sum().magnitude / ref_intensity[0].sum()
     if not (0.95 < scale_offset < 1.05):
         msg = f"Overall magnitude different from AbINS: {scale_offset * 100:.1f}%"
         warnings.warn(msg)
@@ -116,7 +219,7 @@ def test_calculate_isotropic_incoherent_spectrum(temperature_k, gasb_modes):
     assert_allclose(
         spectrum.y_data.magnitude,
         ref_intensity[0] * scale_offset,
-        rtol=0.01,
+        rtol=1e-2
     )
 
 
@@ -130,9 +233,11 @@ def test_a_abins_ref(gasb_modes) -> None:
     ref_a_traces = np.load(test_data / "GaSb_abins_isotropic_dw.npz")["a_traces"]
 
     dw = calculate_atomic_displacements(gasb_modes, temperature=Quantity(100, "K"))
-    assert_allclose(np.trace(dw.debye_waller.to("angstrom^2").magnitude, axis1=1, axis2=2),
-                    ref_a_traces / 2,
-                    atol=1e-8)
+    assert_allclose(
+        np.trace(dw.debye_waller.to("angstrom^2").magnitude, axis1=1, axis2=2),
+        ref_a_traces / 2,
+        atol=1e-8,
+    )
 
 
 def test_isotropic_dw(gasb_modes):
@@ -146,75 +251,23 @@ def test_isotropic_dw(gasb_modes):
     assert_allclose(binned_dw_factor[0], dw_data["iso_dw"].transpose(), rtol=1e-6)
 
 
-def test_displacements_abins_ref(gasb_modes) -> None:
+@pytest.mark.parametrize("temperature_k", [0, 100])
+def test_displacements_abins_ref(temperature_k, gasb_modes) -> None:
     """Check calculated displacements against Mantid-Abins reference
 
     Note that as in ADP there seems to be a factor two difference as Mantid
     implementation has absorbed the "2" to construct 2W when summing over B
 
     """
-    b = calculate_mode_displacements(gasb_modes, temperature=Quantity(0, 'kelvin'))
+    b = calculate_mode_displacements(
+        gasb_modes,
+        temperature=Quantity(temperature_k, "kelvin"),
+        occupation=BoseOccupation.N_PLUS_ONE,
+    )
 
-    # From Abins, GaSb
-    # b-tensors on qpt 2 before bose weighting:
-    ref_b_gasb_qpt_2 = np.array(
-        [[[[ 1.48587656e-03,  7.50849933e-04,  7.48360116e-04],
-           [ 7.50849933e-04,  3.79424206e-04,  3.78164567e-04],
-           [ 7.48360116e-04,  3.78164567e-04,  3.76910788e-04]],
-
-          [[ 1.38937833e-03,  7.10432646e-04,  7.08110593e-04],
-           [ 7.10432646e-04,  3.63272737e-04,  3.62088584e-04],
-           [ 7.08110593e-04,  3.62088584e-04,  3.60909927e-04]]],
-
-         [[[ 1.89313182e-09, -1.22087873e-06,  1.22283305e-06],
-           [-1.22087873e-06,  1.11538946e-03, -1.11666500e-03],
-           [ 1.22283305e-06, -1.11666500e-03,  1.11794255e-03]],
-
-          [[ 1.80713405e-09, -1.15304297e-06,  1.15487878e-06],
-           [-1.15304297e-06,  1.04835577e-03, -1.04953272e-03],
-           [ 1.15487878e-06, -1.04953272e-03,  1.05071154e-03]]],
-
-
-         [[[ 1.71992043e-04, -1.68918173e-04, -1.68917047e-04],
-           [-1.68918173e-04,  1.65899251e-04,  1.65898144e-04],
-           [-1.68917047e-04,  1.65898144e-04,  1.65897038e-04]],
-
-          [[ 2.73952065e-04, -2.68765808e-04, -2.68763937e-04],
-           [-2.68765808e-04,  2.63699831e-04,  2.63697918e-04],
-           [-2.68763937e-04,  2.63697918e-04,  2.63696004e-04]]],
-
-         [[[ 2.59028780e-04, -2.70461782e-04, -2.70538263e-04],
-           [-2.70461782e-04,  2.82612314e-04,  2.82692237e-04],
-           [-2.70538263e-04,  2.82692237e-04,  2.82772183e-04]],
-
-          [[ 5.43028601e-05, -5.59343902e-05, -5.59404480e-05],
-           [-5.59343902e-05,  5.78273828e-05,  5.78349764e-05],
-           [-5.59404480e-05,  5.78349764e-05,  5.78425793e-05]]],
-
-         [[[ 5.12162113e-13, -2.09565362e-09,  2.09541534e-09],
-           [-2.09565362e-09,  3.40594774e-04, -3.40476541e-04],
-           [ 2.09541534e-09, -3.40476541e-04,  3.40358351e-04]],
-
-          [[ 1.11038411e-12,  1.03777160e-08, -1.03769150e-08],
-           [ 1.03777160e-08,  1.18803506e-04, -1.18783735e-04],
-           [-1.03769150e-08, -1.18783735e-04,  1.18763971e-04]]],
-
-        [[[ 4.67513677e-04,  2.22335826e-04,  2.22411360e-04],
-          [ 2.22335826e-04,  1.05844601e-04,  1.05880162e-04],
-          [ 2.22411360e-04,  1.05880162e-04,  1.05915737e-04]],
-
-         [[ 1.59504121e-04,  7.81237807e-05,  7.81494256e-05],
-          [ 7.81237807e-05,  3.83667651e-05,  3.83795488e-05],
-          [ 7.81494256e-05,  3.83795488e-05,  3.83923371e-05]]]])
+    ref_b = np.load(test_data / f"GaSb_abins_{temperature_k}k_B.npz")
 
     assert_allclose(
         b.to("angstrom^2").magnitude[1],
-        ref_b_gasb_qpt_2,
+        np.swapaxes(ref_b["qpt-1"], 0, 1),
     )
-
-# Raw intensity values from Abins _calculate_order_one (pre-DW)
-# [[[0., 0., 0., 0.00589447, 0.00589447, 0.00586518],
-#   [0., 0., 0., 0.00193254, 0.00193254, 0.00192238]]
-#  [[0.0174369,  0.01732897, 0.00349493, 0.00698129, 0.00583648, 0.00583332],
-#   [0.01643643, 0.01628717, 0.0055592,  0.00143936, 0.0020362,  0.00202893]]]
-
