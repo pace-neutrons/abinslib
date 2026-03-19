@@ -21,7 +21,15 @@ from abinslib.util import calculate_indirect_q2
 test_data = Path(__file__).parent / "data"
 
 
-def test_calculate_adp():
+@pytest.fixture(scope="module")
+def gasb_modes() -> QpointPhononModes:
+    """Phonon modes of GaSb on two q-points from CASTEP"""
+    return QpointPhononModes.from_json_file(
+        str(test_data / "GaSb_qpoint_phonon_modes.json")
+    )
+
+
+def test_calculate_adp(gasb_modes):
     """Check ADP agrees with Euphonic and Abins implementations
 
     Euphonic reference is calculated on-the-fly
@@ -37,13 +45,9 @@ def test_calculate_adp():
 
     """
 
-    modes = QpointPhononModes.from_json_file(
-        str(test_data / "GaSb_qpoint_phonon_modes.json")
-    )
+    dw = calculate_atomic_displacements(gasb_modes, temperature=Quantity(100, "K"))
 
-    dw = calculate_atomic_displacements(modes, temperature=Quantity(100, "K"))
-
-    euphonic_dw = modes.calculate_debye_waller(
+    euphonic_dw = gasb_modes.calculate_debye_waller(
         temperature=Quantity(100, "K"),
         frequency_min=Quantity(0.01, "meV"),
         symmetrise=False,
@@ -61,53 +65,46 @@ def test_calculate_adp():
                     atol=1e-8)
 
 
-def test_calculate_isotropic_incoherent_fundamentals():
-    modes = QpointPhononModes.from_json_file(
-        str(test_data / "GaSb_qpoint_phonon_modes.json")
-    )
-    b = calculate_mode_displacements(modes, temperature=Quantity(100, "K"))
+def test_calculate_isotropic_incoherent_fundamentals(gasb_modes):
+    b = calculate_mode_displacements(gasb_modes, temperature=Quantity(100, "K"))
     a = calculate_atomic_displacements(
-        modes, temperature=Quantity(100, "K"), mode_displacements=b
+        gasb_modes, temperature=Quantity(100, "K"), mode_displacements=b
     )
 
     calculate_isotropic_incoherent_fundamentals(
-        modes, b, a, Quantity(np.ones_like(modes.frequencies), "angstrom^-2")
+        gasb_modes, b, a, Quantity(np.ones_like(gasb_modes.frequencies), "angstrom^-2")
     )
     # No reference data yet, just check it doesn't raise an error!
 
 
 @pytest.mark.parametrize('temperature_k', [10, 100])
-def test_calculate_isotropic_incoherent_spectrum(temperature_k):
+def test_calculate_isotropic_incoherent_spectrum(temperature_k, gasb_modes):
     temperature = Quantity(temperature_k, "K")
     ref_data = np.load(test_data / f"GaSb_abins_{temperature_k}k_isotropic_raw.npz")
 
     bins = Quantity(ref_data["energy"], str(ref_data["energy_unit"]))
     ref_intensity = ref_data["intensity"]
 
-    modes = QpointPhononModes.from_json_file(
-        str(test_data / "GaSb_qpoint_phonon_modes.json")
-    )
-
     n_plus_one_b = calculate_mode_displacements(
-        modes, temperature=temperature, occupation=BoseOccupation.N_PLUS_ONE)
+        gasb_modes, temperature=temperature, occupation=BoseOccupation.N_PLUS_ONE)
     two_n_plus_one_b = calculate_mode_displacements(
-        modes, temperature=temperature, occupation=BoseOccupation.TWO_N_PLUS_ONE)
+        gasb_modes, temperature=temperature, occupation=BoseOccupation.TWO_N_PLUS_ONE)
     a = calculate_atomic_displacements(
-        modes, temperature=temperature, mode_displacements=two_n_plus_one_b
+        gasb_modes, temperature=temperature, mode_displacements=two_n_plus_one_b
     )
 
     q2 = calculate_indirect_q2(
-        modes.frequencies,
+        gasb_modes.frequencies,
         angle=(134.98885653282196 * np.pi / 180),
         final_energy=Quantity(32.0, "1/cm").to("meV"),
     )
 
-    spectra = calculate_isotropic_incoherent_spectra(modes, n_plus_one_b, a, q2, bins)
+    spectra = calculate_isotropic_incoherent_spectra(gasb_modes, n_plus_one_b, a, q2, bins)
 
     spectrum = spectra.sum()
 
     # TODO This is still a little mysterious, investigate further.
-    # We seem to differ by a factor ~4?
+    # We seem to differ by a factor ~8?
     scale_offset = (
         spectrum.y_data.sum().magnitude / ref_intensity[0].sum()
     )
@@ -138,38 +135,29 @@ def test_calculate_isotropic_incoherent_spectrum(temperature_k):
         assert_allclose(binned_dw_factor[0], dw_data["iso_dw"].transpose(), rtol=1e-6)
 
 
-def test_a_abins_ref() -> None:
+def test_a_abins_ref(gasb_modes) -> None:
     """Check calculated A against Abins isotropic calculation
 
     The reference average_a_traces are from Abins calculate_isotropic_dw method
     which takes weighted sum over traces at each k-point.
 
     """
-
-    modes = QpointPhononModes.from_json_file(
-        str(test_data / "GaSb_qpoint_phonon_modes.json")
-    )
-
     ref_a_traces = np.load(test_data / "GaSb_abins_isotropic_dw.npz")["a_traces"]
 
-    dw = calculate_atomic_displacements(modes, temperature=Quantity(100, "K"))
+    dw = calculate_atomic_displacements(gasb_modes, temperature=Quantity(100, "K"))
     assert_allclose(np.trace(dw.debye_waller.to("angstrom^2").magnitude, axis1=1, axis2=2),
                     ref_a_traces / 2,
                     atol=1e-8)
 
 
-def test_displacements_abins_ref() -> None:
+def test_displacements_abins_ref(gasb_modes) -> None:
     """Check calculated displacements against Mantid-Abins reference
 
     Note that as in ADP there seems to be a factor two difference as Mantid
     implementation has absorbed the "2" to construct 2W when summing over B
 
     """
-
-    modes = QpointPhononModes.from_json_file(
-        str(test_data / "GaSb_qpoint_phonon_modes.json")
-    )
-    b = calculate_mode_displacements(modes, temperature=Quantity(0, 'kelvin'))
+    b = calculate_mode_displacements(gasb_modes, temperature=Quantity(0, 'kelvin'))
 
     # From Abins, GaSb
     # b-tensors on qpt 2 before bose weighting:
