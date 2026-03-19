@@ -119,21 +119,6 @@ def test_calculate_isotropic_incoherent_spectrum(temperature_k, gasb_modes):
         rtol=0.01,
     )
 
-    if temperature_k == 100:
-        dw_data = np.load(test_data / "GaSb_abins_isotropic_dw.npz")
-        binned_q2 = calculate_indirect_q2(
-            0.5 * (bins[:-1] + bins[1:]),
-            angle=(134.98885653282196 * np.pi / 180),
-            final_energy=Quantity(32.0, "1/cm").to("meV"),
-        )
-
-        assert_allclose(binned_q2, dw_data["q2"])
-
-        binned_dw_factor = calculate_isotropic_dw_factor(
-            a, binned_q2[None, :]
-        )
-        assert_allclose(binned_dw_factor[0], dw_data["iso_dw"].transpose(), rtol=1e-6)
-
 
 def test_a_abins_ref(gasb_modes) -> None:
     """Check calculated A against Abins isotropic calculation
@@ -148,6 +133,17 @@ def test_a_abins_ref(gasb_modes) -> None:
     assert_allclose(np.trace(dw.debye_waller.to("angstrom^2").magnitude, axis1=1, axis2=2),
                     ref_a_traces / 2,
                     atol=1e-8)
+
+
+def test_isotropic_dw(gasb_modes):
+    """Check isotropic DW on Q2 mesh agrees with Mantid-Abins"""
+    dw_data = np.load(test_data / "GaSb_abins_isotropic_dw.npz")
+    q2 = Quantity(dw_data["q2"], "angstrom^-2")
+
+    a = calculate_atomic_displacements(gasb_modes, temperature=Quantity(100, "kelvin"))
+
+    binned_dw_factor = calculate_isotropic_dw_factor(a, q2[None, :])
+    assert_allclose(binned_dw_factor[0], dw_data["iso_dw"].transpose(), rtol=1e-6)
 
 
 def test_displacements_abins_ref(gasb_modes) -> None:
