@@ -10,7 +10,7 @@ This is still an experimental playground, please do not use for production.
 Install with testing dependency group, e.g. from this directory
 
 ```
-pip install .[test]
+pip install . --group test
 ```
 
 and run with pytest

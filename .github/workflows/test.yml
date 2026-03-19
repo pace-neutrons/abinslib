@@ -21,10 +21,10 @@ jobs:
         with:
           python-version: ${{ matrix.python_version }}
 
-      - name: Install package
+      - name: Install package and testing requirements
         shell: bash -el {0}
         run: |
-          pip install .[test]
+          pip install . --group test
 
       - name: Test with pytest
         shell: bash -el {0}
