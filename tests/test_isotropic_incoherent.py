@@ -1,7 +1,9 @@
+from itertools import product
 from pathlib import Path
 import warnings
 
 from euphonic import QpointPhononModes, Quantity
+from euphonic.spectra import Spectrum1DCollection
 import numpy as np
 from numpy.testing import assert_allclose
 import pytest
@@ -271,3 +273,100 @@ def test_displacements_abins_ref(temperature_k, gasb_modes) -> None:
         b.to("angstrom^2").magnitude[1],
         np.swapaxes(ref_b["qpt-1"], 0, 1),
     )
+
+
+### Next step: what is going on with histograms?
+#
+# Dump from just before binning: (kpt weights are applied during binnning)
+# intensity, kpt_weight, frequencies, bins
+#
+# [0.00022573 0.00022573 0.00022323] 0.3333333333 [227.038174 227.038204 229.610545] [0.000e+00 1.000e+00 2.000e+00 ... 4.098e+03 4.099e+03 4.100e+03]
+# [7.40083172e-05 7.40083087e-05 7.31655322e-05] 0.3333333333 [227.038174 227.038204 229.610545] [0.000e+00 1.000e+00 2.000e+00 ... 4.098e+03 4.099e+03 4.100e+03]
+# [0.0007474  0.00074444 0.00016793 0.0002748  0.00022698 0.00022642] 0.6666666667 [ 40.75032   40.986472 127.037788 215.635623 220.637147 221.436705] [0.000e+00 1.000e+00 2.000e+00 ... 4.098e+03 4.099e+03 4.100e+03]
+# [7.04520332e-04 6.99689704e-04 2.67115967e-04 5.66576074e-05
+#  7.91891594e-05 7.87544076e-05] 0.6666666667 [ 40.75032   40.986472 127.037788 215.635623 220.637147 221.436705] [0.000e+00 1.000e+00 2.000e+00 ... 4.098e+03 4.099e+03 4.100e+03]
+
+def test_binning(gasb_modes):
+    """Check we can reproduce Mantid-Abins histogram binning
+
+    Abins loops over q-points and atoms separately, which isn't how the
+    abins-lib function works. So check that we can reproduce the results with
+    a simple call to np.histogram from abins-lib mode intensities.
+    """
+
+    ref_data = np.load(test_data / "GaSb_isotropic_binning.npz")
+
+    temperature = Quantity(0, "K")
+    b = calculate_mode_displacements(
+        gasb_modes, temperature=temperature, occupation=BoseOccupation.N_PLUS_ONE
+    )
+
+    a = calculate_atomic_displacements(
+        gasb_modes,
+        temperature=temperature,
+        mode_displacements=calculate_mode_displacements(
+            gasb_modes,
+            temperature=temperature,
+            occupation=BoseOccupation.TWO_N_PLUS_ONE,
+        ),
+    )
+    q2 = Quantity(np.ones_like(gasb_modes.frequencies), "angstrom^-2")
+
+    intensities = calculate_isotropic_incoherent_fundamentals(gasb_modes, b, a, q2)
+    # Remove DW scaling to compare with Abins pre-DW intensities
+    dw_factor = calculate_isotropic_dw_factor(a, q2)
+    intensities /= dw_factor
+
+    bins = np.arange(0., 4100.001, 1.)
+    for atom_index, q_index in product((0, 1), (0, 1)):
+        ref_spec = ref_data[f"atom_{atom_index}_k_{q_index}"]
+
+        hist, _ = np.histogram(
+            gasb_modes.frequencies[q_index].to("1/cm").magnitude,
+            bins=bins,
+            weights=intensities[q_index, :, atom_index],
+            density=False)
+        hist *= gasb_modes.weights[q_index]
+
+        assert_allclose(ref_spec, hist, rtol=1e-4)
+
+
+def test_calculate_isotropic_incoherent_spectra(gasb_modes):
+    """Check spectrum collection against intermediate Abins data
+
+    We are checking against the spectrum calculated at Q=1 before corrections
+    are applied (i.e. from the middle of _calculate_s_isotropic), so
+
+    - (input) q-point weights are included
+    - cross sections are not included
+    - nominal Q = 1
+    """
+
+    temperature = Quantity(0., "K")
+
+    bins = Quantity(np.arange(0., 4100.001, 1.), "1/cm")
+
+    n_plus_one_b = calculate_mode_displacements(
+        gasb_modes, temperature=temperature, occupation=BoseOccupation.N_PLUS_ONE
+    )
+    two_n_plus_one_b = calculate_mode_displacements(
+        gasb_modes, temperature=temperature, occupation=BoseOccupation.TWO_N_PLUS_ONE
+    )
+    a = calculate_atomic_displacements(
+        gasb_modes, temperature=temperature, mode_displacements=two_n_plus_one_b
+    )
+
+    # Q2 calculated at exact Mantid-Abins TOSCA backscattering angle
+    q2 = Quantity(np.ones_like(gasb_modes.frequencies), "angstrom^-2")
+
+    spectra = calculate_isotropic_incoherent_spectra(
+        gasb_modes, n_plus_one_b, a, q2, bins,
+        apply_cross_section=False,
+        include_dw=False,
+    )
+
+    ref_spectra = Spectrum1DCollection.from_json_file(test_data / "abins-spectra-unit-q.json")
+
+    for atom_index in {item["atom_index"] for item in spectra.iter_metadata()}:
+        assert_allclose(ref_spectra.select(atom_index=atom_index).y_data,
+                        spectra.select(atom_index=atom_index).y_data,)

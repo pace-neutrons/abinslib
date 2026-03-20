@@ -55,7 +55,7 @@ def calculate_mode_displacements(
         )
 
         mode_displacements[q_index] = np.einsum(
-            "j,i,i,ijkl->ijkl",
+           "j,i,i,ijkl->ijkl",
             1 / (2 * modes.crystal.atom_mass.to("m_e").magnitude),
             freq_term[q_index],
             mask[q_index],
@@ -108,6 +108,7 @@ def calculate_isotropic_incoherent_fundamentals(
     mode_displacements: Quantity,
     atomic_displacements: DebyeWaller,
     nominal_q2: Quantity,
+    include_dw: bool = True,
 ) -> Quantity:
     """Calculate mode intensities in fully-isotropic approximation
 
@@ -125,7 +126,11 @@ def calculate_isotropic_incoherent_fundamentals(
         * np.trace(mode_displacements.to("bohr^2").magnitude, axis1=-2, axis2=-1)
         / 3
     )
-    dw_factor = calculate_isotropic_dw_factor(atomic_displacements, nominal_q2)
+
+    if include_dw:
+        dw_factor = calculate_isotropic_dw_factor(atomic_displacements, nominal_q2)
+    else:
+        dw_factor = 1.
 
     return intensities * dw_factor
 
@@ -133,7 +138,7 @@ def calculate_isotropic_incoherent_fundamentals(
 def calculate_isotropic_dw_factor(
     atomic_displacements: DebyeWaller,
     q2: Quantity,
-):
+) -> np.ndarray:
     dw = atomic_displacements.debye_waller.to("bohr^2").magnitude
 
     return np.exp(
@@ -150,6 +155,8 @@ def calculate_isotropic_incoherent_spectra(
     atomic_displacements: DebyeWaller,
     nominal_q2: Quantity,
     bins: Quantity,
+    apply_cross_section: bool = True,
+    include_dw: bool = True,
 ) -> Spectrum1DCollection:
     """Calculate INS intensities in fully-isotropic incoherent approximation
 
@@ -169,28 +176,32 @@ def calculate_isotropic_incoherent_spectra(
         mode_displacements=mode_displacements,
         atomic_displacements=atomic_displacements,
         nominal_q2=nominal_q2,
+        include_dw=include_dw,
     )
 
     bin_width = bins[1] - bins[0]
 
     from euphonic.util import get_reference_data
 
-    xs_coh_data = get_reference_data(
-        collection="BlueBook", physical_property="coherent_cross_section"
-    )
-    xs_inc_data = get_reference_data(
-        collection="BlueBook", physical_property="incoherent_cross_section"
-    )
-    cross_sections = [
-        xs_coh_data[symbol].to("barn").magnitude
-        + xs_inc_data[symbol].to("barn").magnitude
-        for symbol in modes.crystal.atom_type
-    ]
-
     q_weights = modes.weights / modes.weights.sum()
 
+    if apply_cross_section:
+        xs_coh_data = get_reference_data(
+            collection="BlueBook", physical_property="coherent_cross_section"
+        )
+        xs_inc_data = get_reference_data(
+            collection="BlueBook", physical_property="incoherent_cross_section"
+        )
+        atom_weights = np.array([
+            xs_coh_data[symbol].to("barn").magnitude
+            + xs_inc_data[symbol].to("barn").magnitude
+            for symbol in modes.crystal.atom_type
+        ])
+    else:
+        atom_weights = np.ones_like(modes.crystal.atom_mass)
+
     weighted_intensities = np.einsum(
-        "i,k,ijk->ijk", q_weights, np.array(cross_sections), intensities
+        "i,k,ijk->ijk", q_weights, atom_weights, intensities
     )
 
     frequencies = modes.frequencies.to(bins.units).magnitude
@@ -213,7 +224,7 @@ def calculate_isotropic_incoherent_spectra(
 
     metadata = {
         "method": "isotropic incoherent",
-        "cross sections": "incoherent + coherent",
+        "cross sections": ("incoherent + coherent" if apply_cross_section else "none"),
         "line_data": [
             {"atom_index": i, "atom_symbol": symbol}
             for i, symbol in enumerate(modes.crystal.atom_type)
