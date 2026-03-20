@@ -210,18 +210,14 @@ def test_calculate_isotropic_incoherent_spectrum(temperature_k, gasb_modes):
 
     spectrum = spectra.sum()
 
-    # TODO This is still a little mysterious, investigate further.
-    # We seem to differ by a factor ~8?
-    scale_offset = spectrum.y_data.sum().magnitude / ref_intensity[0].sum()
-    if not (0.95 < scale_offset < 1.05):
-        msg = f"Overall magnitude different from AbINS: {scale_offset * 100:.1f}%"
-        warnings.warn(msg)
+    # Pretty sure the scale factor is meV -> wavenumber bin width, just not sure why!
+    scale_offset = Quantity("meV").to("1/cm").magnitude
 
     # Compare normalized spectra for now
     assert_allclose(
         spectrum.y_data.magnitude,
         ref_intensity[0] * scale_offset,
-        rtol=1e-2
+        rtol=5e-3
     )
 
 
@@ -274,17 +270,6 @@ def test_displacements_abins_ref(temperature_k, gasb_modes) -> None:
         np.swapaxes(ref_b["qpt-1"], 0, 1),
     )
 
-
-### Next step: what is going on with histograms?
-#
-# Dump from just before binning: (kpt weights are applied during binnning)
-# intensity, kpt_weight, frequencies, bins
-#
-# [0.00022573 0.00022573 0.00022323] 0.3333333333 [227.038174 227.038204 229.610545] [0.000e+00 1.000e+00 2.000e+00 ... 4.098e+03 4.099e+03 4.100e+03]
-# [7.40083172e-05 7.40083087e-05 7.31655322e-05] 0.3333333333 [227.038174 227.038204 229.610545] [0.000e+00 1.000e+00 2.000e+00 ... 4.098e+03 4.099e+03 4.100e+03]
-# [0.0007474  0.00074444 0.00016793 0.0002748  0.00022698 0.00022642] 0.6666666667 [ 40.75032   40.986472 127.037788 215.635623 220.637147 221.436705] [0.000e+00 1.000e+00 2.000e+00 ... 4.098e+03 4.099e+03 4.100e+03]
-# [7.04520332e-04 6.99689704e-04 2.67115967e-04 5.66576074e-05
-#  7.91891594e-05 7.87544076e-05] 0.6666666667 [ 40.75032   40.986472 127.037788 215.635623 220.637147 221.436705] [0.000e+00 1.000e+00 2.000e+00 ... 4.098e+03 4.099e+03 4.100e+03]
 
 def test_binning(gasb_modes):
     """Check we can reproduce Mantid-Abins histogram binning
