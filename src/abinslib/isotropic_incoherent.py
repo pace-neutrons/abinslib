@@ -89,7 +89,9 @@ def calculate_atomic_displacements(
     """
     if mode_displacements is None:
         mode_displacements = calculate_mode_displacements(
-            modes=modes, temperature=temperature
+            modes=modes,
+            temperature=temperature,
+            occupation=BoseOccupation.TWO_N_PLUS_ONE,
         )
 
     dw = np.einsum(

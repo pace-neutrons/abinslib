@@ -189,34 +189,28 @@ def test_calculate_isotropic_incoherent_spectrum(temperature_k, gasb_modes):
     ref_data = np.load(test_data / f"GaSb_abins_{temperature_k}k_isotropic_raw.npz")
 
     bins = Quantity(ref_data["energy"], str(ref_data["energy_unit"]))
+    bin_width = bins[1] - bins[0]
+
     ref_intensity = ref_data["intensity"]
 
-    n_plus_one_b = calculate_mode_displacements(
+    b = calculate_mode_displacements(
         gasb_modes, temperature=temperature, occupation=BoseOccupation.N_PLUS_ONE
     )
-    two_n_plus_one_b = calculate_mode_displacements(
-        gasb_modes, temperature=temperature, occupation=BoseOccupation.TWO_N_PLUS_ONE
-    )
     a = calculate_atomic_displacements(
-        gasb_modes, temperature=temperature, mode_displacements=two_n_plus_one_b
+        gasb_modes, temperature=temperature
     )
 
     # Q2 calculated at exact Mantid-Abins TOSCA backscattering angle
     q2 = Quantity(np.load(test_data / "GaSb_modes_q2.npy"), "angstrom^-2")
 
     spectra = calculate_isotropic_incoherent_spectra(
-        gasb_modes, n_plus_one_b, a, q2, bins
+        gasb_modes, b, a, q2, bins
     )
-
     spectrum = spectra.sum()
 
-    # Pretty sure the scale factor is meV -> wavenumber bin width, just not sure why!
-    scale_offset = Quantity("meV").to("1/cm").magnitude
-
-    # Compare normalized spectra for now
     assert_allclose(
         spectrum.y_data.magnitude,
-        ref_intensity[0] * scale_offset,
+        ref_intensity[0] / bin_width.magnitude,
         rtol=5e-3
     )
 
