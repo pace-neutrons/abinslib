@@ -347,17 +347,19 @@ def test_calculate_isotropic_incoherent_spectra_q1_no_dw(gasb_modes):
     ref_spectra = Spectrum1DCollection.from_json_file(test_data / "abins-spectra-unit-q.json")
 
     for atom_index in {item["atom_index"] for item in spectra.iter_metadata()}:
-        assert_allclose(ref_spectra.select(atom_index=atom_index).y_data,
-                        spectra.select(atom_index=atom_index).y_data,)
+        assert_allclose(ref_spectra.select(atom_index=atom_index).y_data.magnitude,
+                        spectra.select(atom_index=atom_index).y_data.magnitude,)
 
     # Repeat comparison after Q2 scaling applied to binned results
     ref_spectra = Spectrum1DCollection.from_json_file(test_data / "abins-spectra-no-dw.json")
     spec_q2_scale = Quantity(np.load(test_data / "abins-q2-dump.npy"), "angstrom^-2 angstrom^2")
 
     for atom_index in {item["atom_index"] for item in spectra.iter_metadata()}:
-        assert_allclose(ref_spectra.select(atom_index=atom_index).y_data,
-                        spectra.select(atom_index=atom_index).y_data * spec_q2_scale,
-                        rtol=1e-5)
+        assert_allclose(
+            ref_spectra.select(atom_index=atom_index).y_data.magnitude,
+            (spectra.select(atom_index=atom_index).y_data * spec_q2_scale).to("barn cm").magnitude,
+            rtol=1e-5
+        )
 
     # Calculate at exact Q2 values: note increased error!
     # This is because Abins intensity is calculated at Q=1 and scaled for its
@@ -371,8 +373,8 @@ def test_calculate_isotropic_incoherent_spectra_q1_no_dw(gasb_modes):
     )
 
     for atom_index in {item["atom_index"] for item in spectra.iter_metadata()}:
-        assert_allclose(ref_spectra.select(atom_index=atom_index).y_data,
-                        spectra.select(atom_index=atom_index).y_data,
+        assert_allclose(ref_spectra.select(atom_index=atom_index).y_data.magnitude,
+                        spectra.select(atom_index=atom_index).y_data.magnitude,
                         rtol=5e-3)
 
     # Try again on a coarser mesh:
@@ -390,6 +392,6 @@ def test_calculate_isotropic_incoherent_spectra_q1_no_dw(gasb_modes):
     # Note that a larger tolerance is needed... and also some accounting for bin width!
     # Mantid-Abins calculation has not (yet?) divided by bin width
     for atom_index in {item["atom_index"] for item in spectra.iter_metadata()}:
-        assert_allclose(ref_spectra.select(atom_index=atom_index).y_data / bin_scale,
-                        spectra.select(atom_index=atom_index).y_data,
+        assert_allclose(ref_spectra.select(atom_index=atom_index).y_data.magnitude / bin_scale,
+                        spectra.select(atom_index=atom_index).y_data.magnitude,
                         rtol=5e-2)
