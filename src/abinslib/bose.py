@@ -6,6 +6,9 @@ from euphonic import Quantity, ureg
 import numpy as np
 
 
+class NegativeTemperatureError(ValueError): ...
+
+
 class BoseOccupation(Enum):
     """Occupation number for Bose-Einstein statistics
 
@@ -25,6 +28,10 @@ def calculate_bose_factor(
     occupation: BoseOccupation,
 ) -> np.array:
     """Get Bose factors corresponding to an array of frequency or energy"""
+    if temperature == Quantity(0.0, "kelvin"):
+        return _zero_t_bose_factor(frequencies, occupation)
+    if temperature < Quantity(0.0, "kelvin"):
+        raise NegativeTemperatureError("Temperature must not be negative")
 
     frequencies = frequencies.to("hartree").magnitude
     kT = (ureg.k * temperature).to("hartree").magnitude
@@ -40,3 +47,16 @@ def calculate_bose_factor(
             return two_n_plus_one * 0.5 - 0.5
         case other:
             raise ValueError(f"Not a valid occupation number: {other}")
+
+
+def _zero_t_bose_factor(
+        frequencies: Quantity, occupation: BoseOccupation
+) -> np.ndarray:
+    """Get ideal occupation values if T=0, avoiding divide-by-zero"""
+    match occupation:
+        case BoseOccupation.N:
+            return np.zeros_like(frequencies.magnitude)
+        case BoseOccupation.N_PLUS_ONE | BoseOccupation.TWO_N_PLUS_ONE:
+            return np.ones_like(frequencies.magnitude)
+        case _:
+            raise TypeError("Invalid Bose occupation type")

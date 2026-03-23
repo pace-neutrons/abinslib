@@ -30,17 +30,11 @@ def calculate_mode_displacements(
     # Boolean mask of modes to include (i.e. frequency over threshold)
     mask = frequencies > frequency_min.to("hartree").magnitude
 
-    if temperature > Quantity(0.0, "kelvin"):
-        bose_factor = calculate_bose_factor(
+    bose_factor = calculate_bose_factor(
             modes.frequencies,
             temperature,
             occupation=occupation,
-        )
-    else:
-        # Actually this is incorrect for N (phonon emission) statistics
-        bose_factor = 1.0
-
-    freq_term = bose_factor / frequencies
+    )
 
     mode_displacements = np.zeros(
         [*modes.frequencies.shape, modes.crystal.n_atoms, 3, 3]
@@ -57,7 +51,7 @@ def calculate_mode_displacements(
         mode_displacements[q_index] = np.einsum(
            "j,i,i,ijkl->ijkl",
             1 / (2 * modes.crystal.atom_mass.to("m_e").magnitude),
-            freq_term[q_index],
+            bose_factor[q_index] / frequencies[q_index],
             mask[q_index],
             evec_term,
         )
