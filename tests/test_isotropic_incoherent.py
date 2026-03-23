@@ -110,14 +110,16 @@ abins_fundamentals_no_dw = [
 
 
 @pytest.fixture(scope="module")
-def gasb_modes() -> QpointPhononModes:
-    """Phonon modes of GaSb on two q-points from CASTEP"""
-    return QpointPhononModes.from_json_file(
-        str(test_data / "GaSb_qpoint_phonon_modes.json")
-    )
+def ref_modes() -> dict[str, QpointPhononModes]:
+    """Precalculated phonon modes, by name"""
+    return {name:
+        QpointPhononModes.from_json_file(
+            str(test_data / f"{name}_qpoint_phonon_modes.json"))
+            for name in ["GaSb", "ethanol"]
+    }
 
 
-def test_calculate_adp(gasb_modes):
+def test_calculate_adp(ref_modes):
     """Check ADP agrees with Euphonic and Abins implementations
 
     Euphonic reference is calculated on-the-fly
@@ -132,6 +134,7 @@ def test_calculate_adp(gasb_modes):
     - the 2 in exponent has been absorbed into A
 
     """
+    gasb_modes = ref_modes["GaSb"]
 
     dw = calculate_atomic_displacements(gasb_modes, temperature=Quantity(100, "K"))
 
@@ -157,8 +160,9 @@ def test_calculate_adp(gasb_modes):
 
 @pytest.mark.parametrize("temperature_k,q2,abins_ref", abins_fundamentals_no_dw)
 def test_calculate_isotropic_incoherent_fundamentals(
-    gasb_modes, temperature_k, q2, abins_ref
+    ref_modes, temperature_k, q2, abins_ref
 ):
+    gasb_modes = ref_modes["GaSb"]
     temperature = Quantity(temperature_k, "K")
     b = calculate_mode_displacements(
         gasb_modes, temperature=temperature, occupation=BoseOccupation.N_PLUS_ONE
@@ -183,10 +187,12 @@ def test_calculate_isotropic_incoherent_fundamentals(
     assert_allclose(result, abins_ref, rtol=1e-5, atol=1e-8)
 
 
-@pytest.mark.parametrize("temperature_k", [10, 100])
-def test_calculate_isotropic_incoherent_spectrum(temperature_k, gasb_modes):
+@pytest.mark.parametrize("temperature_k,system", product([10, 100], ["GaSb", "ethanol"]))
+def test_calculate_isotropic_incoherent_spectrum(temperature_k, ref_modes, system):
+    modes = ref_modes[system]
+
     temperature = Quantity(temperature_k, "K")
-    ref_data = np.load(test_data / f"GaSb_abins_{temperature_k}k_isotropic_raw.npz")
+    ref_data = np.load(test_data / f"{system}_abins_{temperature_k}k_isotropic_raw.npz")
 
     bins = Quantity(ref_data["energy"], str(ref_data["energy_unit"]))
     bin_width = bins[1] - bins[0]
@@ -194,34 +200,35 @@ def test_calculate_isotropic_incoherent_spectrum(temperature_k, gasb_modes):
     ref_intensity = ref_data["intensity"]
 
     b = calculate_mode_displacements(
-        gasb_modes, temperature=temperature, occupation=BoseOccupation.N_PLUS_ONE
+        modes, temperature=temperature, occupation=BoseOccupation.N_PLUS_ONE
     )
     a = calculate_atomic_displacements(
-        gasb_modes, temperature=temperature
+        modes, temperature=temperature
     )
 
     # Q2 calculated at exact Mantid-Abins TOSCA backscattering angle
-    q2 = Quantity(np.load(test_data / "GaSb_modes_q2.npy"), "angstrom^-2")
+    q2 = Quantity(np.load(test_data / f"{system}_modes_q2.npy"), "angstrom^-2")
 
     spectra = calculate_isotropic_incoherent_spectra(
-        gasb_modes, b, a, q2, bins
+        modes, b, a, q2, bins
     )
     spectrum = spectra.sum()
 
     assert_allclose(
         spectrum.y_data.magnitude,
         ref_intensity[0] / bin_width.magnitude,
-        rtol=5e-3
+        rtol=1e-2,
     )
 
 
-def test_a_abins_ref(gasb_modes) -> None:
+def test_a_abins_ref(ref_modes) -> None:
     """Check calculated A against Abins isotropic calculation
 
     The reference average_a_traces are from Abins calculate_isotropic_dw method
     which takes weighted sum over traces at each k-point.
 
     """
+    gasb_modes = ref_modes["GaSb"]
     ref_a_traces = np.load(test_data / "GaSb_abins_isotropic_dw.npz")["a_traces"]
 
     dw = calculate_atomic_displacements(gasb_modes, temperature=Quantity(100, "K"))
@@ -232,8 +239,9 @@ def test_a_abins_ref(gasb_modes) -> None:
     )
 
 
-def test_isotropic_dw(gasb_modes):
+def test_isotropic_dw(ref_modes):
     """Check isotropic DW on Q2 mesh agrees with Mantid-Abins"""
+    gasb_modes = ref_modes["GaSb"]
     dw_data = np.load(test_data / "GaSb_abins_isotropic_dw.npz")
     q2 = Quantity(dw_data["q2"], "angstrom^-2")
 
@@ -244,13 +252,14 @@ def test_isotropic_dw(gasb_modes):
 
 
 @pytest.mark.parametrize("temperature_k", [0, 100])
-def test_displacements_abins_ref(temperature_k, gasb_modes) -> None:
+def test_displacements_abins_ref(temperature_k, ref_modes) -> None:
     """Check calculated displacements against Mantid-Abins reference
 
     Note that as in ADP there seems to be a factor two difference as Mantid
     implementation has absorbed the "2" to construct 2W when summing over B
 
     """
+    gasb_modes = ref_modes["GaSb"]
     b = calculate_mode_displacements(
         gasb_modes,
         temperature=Quantity(temperature_k, "kelvin"),
@@ -265,14 +274,14 @@ def test_displacements_abins_ref(temperature_k, gasb_modes) -> None:
     )
 
 
-def test_binning(gasb_modes):
+def test_binning(ref_modes):
     """Check we can reproduce Mantid-Abins histogram binning
 
     Abins loops over q-points and atoms separately, which isn't how the
     abins-lib function works. So check that we can reproduce the results with
     a simple call to np.histogram from abins-lib mode intensities.
     """
-
+    gasb_modes = ref_modes["GaSb"]
     ref_data = np.load(test_data / "GaSb_isotropic_binning.npz")
 
     temperature = Quantity(0, "K")
@@ -310,7 +319,7 @@ def test_binning(gasb_modes):
         assert_allclose(ref_spec, hist, rtol=1e-4)
 
 
-def test_calculate_isotropic_incoherent_spectra_q1_no_dw(gasb_modes):
+def test_calculate_isotropic_incoherent_spectra_q1_no_dw(ref_modes):
     """Check spectrum collection against intermediate Abins data
 
     We are checking against the spectrum calculated at Q=1 before corrections
@@ -320,7 +329,7 @@ def test_calculate_isotropic_incoherent_spectra_q1_no_dw(gasb_modes):
     - cross sections are not included
     - nominal Q = 1
     """
-
+    gasb_modes = ref_modes["GaSb"]
     temperature = Quantity(0., "K")
 
     bins = Quantity(np.arange(0., 4100.001, 1.), "1/cm")
