@@ -39,4 +39,4 @@ def test_relative_factors(frequencies, temperature):
 @pytest.mark.parametrize('occupation', [1, "N", None, True])
 def test_bad_occupation_type(frequencies, temperature, occupation):
     with pytest.raises(TypeError, match="Not a valid occupation number"):
-        n = calculate_bose_factor(frequencies, temperature, occupation)
+        calculate_bose_factor(frequencies, temperature, occupation)

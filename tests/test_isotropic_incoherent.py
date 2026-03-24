@@ -1,6 +1,5 @@
 from itertools import product
 from pathlib import Path
-import warnings
 
 from euphonic import QpointPhononModes, Quantity
 from euphonic.spectra import Spectrum1DCollection
@@ -17,7 +16,6 @@ from abinslib.isotropic_incoherent import (
     calculate_isotropic_incoherent_spectra,
     q_scaling_isotropic_incoherent_spectra,
 )
-from abinslib.util import calculate_indirect_q2
 
 
 test_data = Path(__file__).parent / "data"
@@ -113,10 +111,11 @@ abins_fundamentals_no_dw = [
 @pytest.fixture(scope="module")
 def ref_modes() -> dict[str, QpointPhononModes]:
     """Precalculated phonon modes, by name"""
-    return {name:
-        QpointPhononModes.from_json_file(
-            str(test_data / f"{name}_qpoint_phonon_modes.json"))
-            for name in ["GaSb", "ethanol"]
+    return {
+        name: QpointPhononModes.from_json_file(
+            str(test_data / f"{name}_qpoint_phonon_modes.json")
+        )
+        for name in ["GaSb", "ethanol"]
     }
 
 
@@ -187,7 +186,9 @@ def test_calculate_isotropic_incoherent_fundamentals(
     assert_allclose(result, abins_ref, rtol=1e-5, atol=1e-8)
 
 
-@pytest.mark.parametrize("temperature_k,system", product([10, 100], ["GaSb", "ethanol"]))
+@pytest.mark.parametrize(
+    "temperature_k,system", product([10, 100], ["GaSb", "ethanol"])
+)
 def test_calculate_isotropic_incoherent_spectrum(temperature_k, ref_modes, system):
     """Test reference method for fully-isotropic calculation
 
@@ -208,15 +209,14 @@ def test_calculate_isotropic_incoherent_spectrum(temperature_k, ref_modes, syste
         modes, temperature=temperature, occupation=BoseOccupation.N_PLUS_ONE
     )
     a = calculate_atomic_displacements(
-        modes, temperature=temperature,
+        modes,
+        temperature=temperature,
     )
 
     # Q2 calculated at exact Mantid-Abins TOSCA backscattering angle
     q2 = Quantity(np.load(test_data / f"{system}_modes_q2.npy"), "angstrom^-2")
 
-    spectra = calculate_isotropic_incoherent_spectra(
-        modes, b, a, q2, bins
-    )
+    spectra = calculate_isotropic_incoherent_spectra(modes, b, a, q2, bins)
     spectrum = spectra.sum()
 
     assert_allclose(
@@ -226,7 +226,9 @@ def test_calculate_isotropic_incoherent_spectrum(temperature_k, ref_modes, syste
     )
 
 
-@pytest.mark.parametrize("temperature_k,system", product([10, 100], ["GaSb", "ethanol"]))
+@pytest.mark.parametrize(
+    "temperature_k,system", product([10, 100], ["GaSb", "ethanol"])
+)
 def test_q_scaling_isotropic_incoherent_spectrum(temperature_k, ref_modes, system):
     """Validate fully-isotropic calculation against Mantid-Abins data
 
@@ -242,7 +244,6 @@ def test_q_scaling_isotropic_incoherent_spectrum(temperature_k, ref_modes, syste
     ref_data = np.load(test_data / f"{system}_abins_{temperature_k}k_isotropic_raw.npz")
 
     bins = Quantity(ref_data["energy"], str(ref_data["energy_unit"]))
-    bin_centers = 0.5 * (bins[:-1] + bins[1:])
     bin_width = bins[1] - bins[0]
 
     ref_intensity = ref_data["intensity"]
@@ -251,13 +252,12 @@ def test_q_scaling_isotropic_incoherent_spectrum(temperature_k, ref_modes, syste
         modes, temperature=temperature, occupation=BoseOccupation.N_PLUS_ONE
     )
     a = calculate_atomic_displacements(
-        modes, temperature=temperature,
+        modes,
+        temperature=temperature,
     )
     q2 = Quantity(np.load(test_data / "abins-q2-1_4-dump.npy"), "Å^-2")
 
-    spectra = q_scaling_isotropic_incoherent_spectra(
-        modes, b, a, q2, bins
-    )
+    spectra = q_scaling_isotropic_incoherent_spectra(modes, b, a, q2, bins)
     spectrum = spectra.sum()
 
     assert_allclose(
@@ -346,9 +346,11 @@ def test_binning(ref_modes):
     )
     q2 = Quantity(np.ones_like(gasb_modes.frequencies), "angstrom^-2")
 
-    intensities = calculate_isotropic_incoherent_fundamentals(gasb_modes, b, a, q2, include_dw=False)
+    intensities = calculate_isotropic_incoherent_fundamentals(
+        gasb_modes, b, a, q2, include_dw=False
+    )
 
-    bins = np.arange(0., 4100.001, 1.)
+    bins = np.arange(0.0, 4100.001, 1.0)
     for atom_index, q_index in product((0, 1), (0, 1)):
         ref_spec = ref_data[f"atom_{atom_index}_k_{q_index}"]
 
@@ -356,7 +358,8 @@ def test_binning(ref_modes):
             gasb_modes.frequencies[q_index].to("1/cm").magnitude,
             bins=bins,
             weights=intensities[q_index, :, atom_index],
-            density=False)
+            density=False,
+        )
         hist *= gasb_modes.weights[q_index]
 
         assert_allclose(ref_spec, hist, rtol=1e-10)
@@ -377,9 +380,9 @@ def test_calculate_isotropic_incoherent_spectra_q1_no_dw(ref_modes):
 
     """
     gasb_modes = ref_modes["GaSb"]
-    temperature = Quantity(0., "K")
+    temperature = Quantity(0.0, "K")
 
-    bins = Quantity(np.arange(0., 4100.001, 1.), "1/cm")
+    bins = Quantity(np.arange(0.0, 4100.001, 1.0), "1/cm")
 
     n_plus_one_b = calculate_mode_displacements(
         gasb_modes, temperature=temperature, occupation=BoseOccupation.N_PLUS_ONE
@@ -394,30 +397,44 @@ def test_calculate_isotropic_incoherent_spectra_q1_no_dw(ref_modes):
     # Intensities at Q=1 before DW, Q2 scaling
     q2 = Quantity(np.ones_like(gasb_modes.frequencies), "angstrom^-2")
     spectra = calculate_isotropic_incoherent_spectra(
-        gasb_modes, n_plus_one_b, a, q2, bins,
+        gasb_modes,
+        n_plus_one_b,
+        a,
+        q2,
+        bins,
         apply_cross_section=False,
         include_dw=False,
     )
 
-    ref_spectra = Spectrum1DCollection.from_json_file(test_data / "abins-spectra-unit-q.json")
+    ref_spectra = Spectrum1DCollection.from_json_file(
+        test_data / "abins-spectra-unit-q.json"
+    )
 
     for atom_index in {item["atom_index"] for item in spectra.iter_metadata()}:
-        assert_allclose(ref_spectra.select(atom_index=atom_index).y_data.magnitude,
-                        spectra.select(atom_index=atom_index).y_data.magnitude,)
+        assert_allclose(
+            ref_spectra.select(atom_index=atom_index).y_data.magnitude,
+            spectra.select(atom_index=atom_index).y_data.magnitude,
+        )
 
     # Repeat comparison after Q2 scaling applied to binned results
-    ref_spectra = Spectrum1DCollection.from_json_file(test_data / "abins-spectra-no-dw.json")
+    ref_spectra = Spectrum1DCollection.from_json_file(
+        test_data / "abins-spectra-no-dw.json"
+    )
     spec_q2_scale = Quantity(np.load(test_data / "abins-q2-dump.npy"), "Å^-2 Å^2")
 
     for atom_index in {item["atom_index"] for item in spectra.iter_metadata()}:
         assert_allclose(
             ref_spectra.select(atom_index=atom_index).y_data.magnitude,
-            (spectra.select(atom_index=atom_index).y_data * spec_q2_scale).to("barn cm").magnitude,
+            (spectra.select(atom_index=atom_index).y_data * spec_q2_scale)
+            .to("barn cm")
+            .magnitude,
             rtol=1e-8,
         )
 
     # With Q2 scaling and DW
-    ref_spectra = Spectrum1DCollection.from_json_file(test_data / "abins-spectra-dw.json")
+    ref_spectra = Spectrum1DCollection.from_json_file(
+        test_data / "abins-spectra-dw.json"
+    )
 
     dw_q2 = spec_q2_scale / Quantity(1, "Å^2")
     binned_dw_factor = np.swapaxes(calculate_isotropic_dw_factor(a, dw_q2), -2, -1)[0]
@@ -427,6 +444,8 @@ def test_calculate_isotropic_incoherent_spectra_q1_no_dw(ref_modes):
 
         assert_allclose(
             ref_spectra.select(atom_index=atom_index).y_data.magnitude,
-            (spectra.select(atom_index=atom_index).y_data * spec_q2_scale * dw).to("barn cm").magnitude,
+            (spectra.select(atom_index=atom_index).y_data * spec_q2_scale * dw)
+            .to("barn cm")
+            .magnitude,
             rtol=1e-8,
         )
