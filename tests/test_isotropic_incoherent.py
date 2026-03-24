@@ -347,10 +347,7 @@ def test_binning(ref_modes):
     )
     q2 = Quantity(np.ones_like(gasb_modes.frequencies), "angstrom^-2")
 
-    intensities = calculate_isotropic_incoherent_fundamentals(gasb_modes, b, a, q2)
-    # Remove DW scaling to compare with Abins pre-DW intensities
-    dw_factor = calculate_isotropic_dw_factor(a, q2)
-    intensities /= dw_factor
+    intensities = calculate_isotropic_incoherent_fundamentals(gasb_modes, b, a, q2, include_dw=False)
 
     bins = np.arange(0., 4100.001, 1.)
     for atom_index, q_index in product((0, 1), (0, 1)):
@@ -363,7 +360,7 @@ def test_binning(ref_modes):
             density=False)
         hist *= gasb_modes.weights[q_index]
 
-        assert_allclose(ref_spec, hist, rtol=1e-4)
+        assert_allclose(ref_spec, hist, rtol=1e-10)
 
 
 def test_calculate_isotropic_incoherent_spectra_q1_no_dw(ref_modes):
@@ -375,6 +372,10 @@ def test_calculate_isotropic_incoherent_spectra_q1_no_dw(ref_modes):
     - (input) q-point weights are included
     - cross sections are not included
     - nominal Q = 1
+
+    Note that before DW is applied we are getting excellent agreement with 0K
+    Abins calculations.
+
     """
     gasb_modes = ref_modes["GaSb"]
     temperature = Quantity(0., "K")
@@ -391,9 +392,8 @@ def test_calculate_isotropic_incoherent_spectra_q1_no_dw(ref_modes):
         gasb_modes, temperature=temperature, mode_displacements=two_n_plus_one_b
     )
 
-    # Q2 calculated at exact Mantid-Abins TOSCA backscattering angle
+    # Intensities at Q=1 before DW, Q2 scaling
     q2 = Quantity(np.ones_like(gasb_modes.frequencies), "angstrom^-2")
-
     spectra = calculate_isotropic_incoherent_spectra(
         gasb_modes, n_plus_one_b, a, q2, bins,
         apply_cross_section=False,
@@ -414,40 +414,5 @@ def test_calculate_isotropic_incoherent_spectra_q1_no_dw(ref_modes):
         assert_allclose(
             ref_spectra.select(atom_index=atom_index).y_data.magnitude,
             (spectra.select(atom_index=atom_index).y_data * spec_q2_scale).to("barn cm").magnitude,
-            rtol=1e-5
+            rtol=1e-8,
         )
-
-    # Calculate at exact Q2 values: note increased error!
-    # This is because Abins intensity is calculated at Q=1 and scaled for its
-    # nominal value after binning
-    q2 = Quantity(np.load(test_data / "GaSb_modes_q2.npy"), "Å^-2")
-
-    spectra = calculate_isotropic_incoherent_spectra(
-        gasb_modes, n_plus_one_b, a, q2, bins,
-        apply_cross_section=False,
-        include_dw=False,
-    )
-
-    for atom_index in {item["atom_index"] for item in spectra.iter_metadata()}:
-        assert_allclose(ref_spectra.select(atom_index=atom_index).y_data.magnitude,
-                        spectra.select(atom_index=atom_index).y_data.magnitude,
-                        rtol=5e-3)
-
-    # Try again on a coarser mesh:
-    bins = Quantity(np.arange(0., 4100.001, 10.), "1/cm")
-    bin_scale = 10.
-
-    ref_spectra = Spectrum1DCollection.from_json_file(test_data / "abins-spectra-no-dw-coarse.json")
-
-    spectra = calculate_isotropic_incoherent_spectra(
-        gasb_modes, n_plus_one_b, a, q2, bins,
-        apply_cross_section=False,
-        include_dw=False,
-    )
-
-    # Note that a larger tolerance is needed... and also some accounting for bin width!
-    # Mantid-Abins calculation has not (yet?) divided by bin width
-    for atom_index in {item["atom_index"] for item in spectra.iter_metadata()}:
-        assert_allclose(ref_spectra.select(atom_index=atom_index).y_data.magnitude / bin_scale,
-                        spectra.select(atom_index=atom_index).y_data.magnitude,
-                        rtol=5e-2)
