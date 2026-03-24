@@ -361,7 +361,7 @@ def test_calculate_isotropic_incoherent_spectra_q1_no_dw(ref_modes):
 
     # Repeat comparison after Q2 scaling applied to binned results
     ref_spectra = Spectrum1DCollection.from_json_file(test_data / "abins-spectra-no-dw.json")
-    spec_q2_scale = Quantity(np.load(test_data / "abins-q2-dump.npy"), "angstrom^-2 angstrom^2")
+    spec_q2_scale = Quantity(np.load(test_data / "abins-q2-dump.npy"), "Å^-2 Å^2")
 
     for atom_index in {item["atom_index"] for item in spectra.iter_metadata()}:
         assert_allclose(
@@ -373,7 +373,7 @@ def test_calculate_isotropic_incoherent_spectra_q1_no_dw(ref_modes):
     # Calculate at exact Q2 values: note increased error!
     # This is because Abins intensity is calculated at Q=1 and scaled for its
     # nominal value after binning
-    q2 = Quantity(np.load(test_data / "GaSb_modes_q2.npy"), "angstrom^-2")
+    q2 = Quantity(np.load(test_data / "GaSb_modes_q2.npy"), "Å^-2")
 
     spectra = calculate_isotropic_incoherent_spectra(
         gasb_modes, n_plus_one_b, a, q2, bins,
