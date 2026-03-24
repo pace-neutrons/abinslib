@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from euphonic import ureg, DebyeWaller, Quantity
+from euphonic.crystal import Crystal
 from euphonic.spectra import Spectrum1DCollection
 import numpy as np
 
@@ -9,6 +10,23 @@ from .bose import BoseOccupation, calculate_bose_factor
 
 if TYPE_CHECKING:
     from euphonic import QpointPhononModes
+
+
+def _get_total_cross_sections(crystal: Crystal) -> Quantity:
+    from euphonic.util import get_reference_data
+
+    xs_coh_data = get_reference_data(
+        collection="BlueBook", physical_property="coherent_cross_section"
+    )
+    xs_inc_data = get_reference_data(
+        collection="BlueBook", physical_property="incoherent_cross_section"
+    )
+    return Quantity(
+        [xs_coh_data[symbol].to("barn").magnitude
+         + xs_inc_data[symbol].to("barn").magnitude
+         for symbol in crystal.atom_type],
+        "barn"
+    )
 
 
 def calculate_mode_displacements(
@@ -176,23 +194,10 @@ def calculate_isotropic_incoherent_spectra(
     )
 
     bin_width = bins[1] - bins[0]
-
-    from euphonic.util import get_reference_data
-
     q_weights = modes.weights / modes.weights.sum()
 
     if apply_cross_section:
-        xs_coh_data = get_reference_data(
-            collection="BlueBook", physical_property="coherent_cross_section"
-        )
-        xs_inc_data = get_reference_data(
-            collection="BlueBook", physical_property="incoherent_cross_section"
-        )
-        atom_weights = np.array([
-            xs_coh_data[symbol].to("barn").magnitude
-            + xs_inc_data[symbol].to("barn").magnitude
-            for symbol in modes.crystal.atom_type
-        ])
+        atom_weights = _get_total_cross_sections(modes.crystal).to("barn").magnitude
     else:
         atom_weights = np.ones_like(modes.crystal.atom_mass)
 

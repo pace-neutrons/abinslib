@@ -34,7 +34,8 @@ def calculate_bose_factor(
         raise NegativeTemperatureError("Temperature must not be negative")
 
     frequencies = frequencies.to("hartree").magnitude
-    kT = (ureg.k * temperature).to("hartree").magnitude
+    # Cast T to Kelvin first in case of non-multiplicative unit (celsius)
+    kT = (ureg.k * temperature.to("kelvin")).to("hartree").magnitude
 
     two_n_plus_one = 1 / (np.tanh(frequencies / (2 * kT)))
 
@@ -46,7 +47,7 @@ def calculate_bose_factor(
         case BoseOccupation.N:
             return two_n_plus_one * 0.5 - 0.5
         case other:
-            raise ValueError(f"Not a valid occupation number: {other}")
+            raise TypeError(f"Not a valid occupation number: {other}")
 
 
 def _zero_t_bose_factor(
