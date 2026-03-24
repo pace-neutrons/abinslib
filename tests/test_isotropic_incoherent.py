@@ -179,10 +179,9 @@ def test_calculate_isotropic_incoherent_fundamentals(
         ),
     )
 
-    result = calculate_isotropic_incoherent_fundamentals(gasb_modes, b, a, q2)
-    # Remove DW scaling to compare with Abins pre-DW intensities
-    dw_factor = calculate_isotropic_dw_factor(a, q2)
-    result /= dw_factor
+    result = calculate_isotropic_incoherent_fundamentals(
+        gasb_modes, b, a, q2, include_dw=False
+    )
 
     abins_ref = np.swapaxes(abins_ref, -1, -2)
     assert_allclose(result, abins_ref, rtol=1e-5, atol=1e-8)
@@ -414,5 +413,20 @@ def test_calculate_isotropic_incoherent_spectra_q1_no_dw(ref_modes):
         assert_allclose(
             ref_spectra.select(atom_index=atom_index).y_data.magnitude,
             (spectra.select(atom_index=atom_index).y_data * spec_q2_scale).to("barn cm").magnitude,
+            rtol=1e-8,
+        )
+
+    # With Q2 scaling and DW
+    ref_spectra = Spectrum1DCollection.from_json_file(test_data / "abins-spectra-dw.json")
+
+    dw_q2 = spec_q2_scale / Quantity(1, "Å^2")
+    binned_dw_factor = np.swapaxes(calculate_isotropic_dw_factor(a, dw_q2), -2, -1)[0]
+
+    for atom_index in {item["atom_index"] for item in spectra.iter_metadata()}:
+        dw = binned_dw_factor[atom_index]
+
+        assert_allclose(
+            ref_spectra.select(atom_index=atom_index).y_data.magnitude,
+            (spectra.select(atom_index=atom_index).y_data * spec_q2_scale * dw).to("barn cm").magnitude,
             rtol=1e-8,
         )
