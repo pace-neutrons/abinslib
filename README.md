@@ -18,3 +18,5 @@ and run with pytest
 ```
 pytest
 ```
+
+You may need to update Pip to access the `--group` feature.
