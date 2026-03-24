@@ -15,6 +15,7 @@ from abinslib.isotropic_incoherent import (
     calculate_isotropic_dw_factor,
     calculate_isotropic_incoherent_fundamentals,
     calculate_isotropic_incoherent_spectra,
+    q_scaling_isotropic_incoherent_spectra,
 )
 from abinslib.util import calculate_indirect_q2
 
@@ -189,6 +190,11 @@ def test_calculate_isotropic_incoherent_fundamentals(
 
 @pytest.mark.parametrize("temperature_k,system", product([10, 100], ["GaSb", "ethanol"]))
 def test_calculate_isotropic_incoherent_spectrum(temperature_k, ref_modes, system):
+    """Test reference method for fully-isotropic calculation
+
+    Note that there is some difference from Mantid-Abins reference because that
+    implementation applies DW and Q2 scaling after initial energy binning
+    """
     modes = ref_modes[system]
 
     temperature = Quantity(temperature_k, "K")
@@ -203,7 +209,7 @@ def test_calculate_isotropic_incoherent_spectrum(temperature_k, ref_modes, syste
         modes, temperature=temperature, occupation=BoseOccupation.N_PLUS_ONE
     )
     a = calculate_atomic_displacements(
-        modes, temperature=temperature
+        modes, temperature=temperature,
     )
 
     # Q2 calculated at exact Mantid-Abins TOSCA backscattering angle
@@ -218,6 +224,47 @@ def test_calculate_isotropic_incoherent_spectrum(temperature_k, ref_modes, syste
         spectrum.y_data.magnitude,
         ref_intensity[0] / bin_width.magnitude,
         rtol=1e-2,
+    )
+
+
+@pytest.mark.parametrize("temperature_k,system", product([10, 100], ["GaSb", "ethanol"]))
+def test_q_scaling_isotropic_incoherent_spectrum(temperature_k, ref_modes, system):
+    """Validate fully-isotropic calculation against Mantid-Abins data
+
+    This implementation follows the scheme of rescaling bins for DW/Q2 terms
+
+    The difference with Mantid-Abins reference is smaller than exact
+    calculation, if still larger than expected
+    """
+
+    modes = ref_modes[system]
+
+    temperature = Quantity(temperature_k, "K")
+    ref_data = np.load(test_data / f"{system}_abins_{temperature_k}k_isotropic_raw.npz")
+
+    bins = Quantity(ref_data["energy"], str(ref_data["energy_unit"]))
+    bin_centers = 0.5 * (bins[:-1] + bins[1:])
+    bin_width = bins[1] - bins[0]
+
+    ref_intensity = ref_data["intensity"]
+
+    b = calculate_mode_displacements(
+        modes, temperature=temperature, occupation=BoseOccupation.N_PLUS_ONE
+    )
+    a = calculate_atomic_displacements(
+        modes, temperature=temperature,
+    )
+    q2 = Quantity(np.load(test_data / "abins-q2-1_4-dump.npy"), "Å^-2")
+
+    spectra = q_scaling_isotropic_incoherent_spectra(
+        modes, b, a, q2, bins
+    )
+    spectrum = spectra.sum()
+
+    assert_allclose(
+        spectrum.y_data.magnitude,
+        ref_intensity[0] / bin_width.magnitude,
+        rtol=2e-3,
     )
 
 
