@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [dependency-groups]
-test = ["pytest>=9.0,<10.0"]
+test = ["pytest>=9.0,<10.0", "pytest-mock"]
 lint = ["ruff>=0.15.2,<1.0"]
 dev = [
     {include-group = 'test'},

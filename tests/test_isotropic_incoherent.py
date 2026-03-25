@@ -1,7 +1,7 @@
 from itertools import product
 from pathlib import Path
 
-from euphonic import QpointPhononModes, Quantity
+from euphonic import Crystal, QpointPhononModes, Quantity
 from euphonic.spectra import Spectrum1DCollection
 import numpy as np
 from numpy.testing import assert_allclose
@@ -158,9 +158,31 @@ def test_calculate_adp(ref_modes):
     )
 
 
+@pytest.fixture
+def patch_cross_sections(mocker):
+    """Replace Euphonic cross-section lookup with Mantid values"""
+
+    def _get_mantid_total_cross_sections(crystal: Crystal) -> Quantity:
+        mantid_data = {
+            "Ga": 6.83,
+            "Sb": 3.9,
+            "C": 5.551,
+            "H": 82.02,
+            "O": 4.232,
+        }
+
+        return Quantity(
+            [mantid_data[symbol] for symbol in crystal.atom_type],
+            "barn"
+        )
+
+    mocker.patch("abinslib.isotropic_incoherent._get_total_cross_sections",
+                 wraps=_get_mantid_total_cross_sections)
+
+
 @pytest.mark.parametrize("temperature_k,q2,abins_ref", abins_fundamentals_no_dw)
 def test_calculate_isotropic_incoherent_fundamentals(
-    ref_modes, temperature_k, q2, abins_ref
+        ref_modes, temperature_k, q2, abins_ref,
 ):
     gasb_modes = ref_modes["GaSb"]
     temperature = Quantity(temperature_k, "K")
@@ -189,7 +211,7 @@ def test_calculate_isotropic_incoherent_fundamentals(
 @pytest.mark.parametrize(
     "temperature_k,system", product([10, 100], ["GaSb", "ethanol"])
 )
-def test_calculate_isotropic_incoherent_spectrum(temperature_k, ref_modes, system):
+def test_calculate_isotropic_incoherent_spectrum(temperature_k, ref_modes, system, patch_cross_sections):
     """Test reference method for fully-isotropic calculation
 
     Note that there is some difference from Mantid-Abins reference because that
@@ -229,7 +251,7 @@ def test_calculate_isotropic_incoherent_spectrum(temperature_k, ref_modes, syste
 @pytest.mark.parametrize(
     "temperature_k,system", product([10, 100], ["GaSb", "ethanol"])
 )
-def test_q_scaling_isotropic_incoherent_spectrum(temperature_k, ref_modes, system):
+def test_q_scaling_isotropic_incoherent_spectrum(temperature_k, ref_modes, system, patch_cross_sections):
     """Validate fully-isotropic calculation against Mantid-Abins data
 
     This implementation follows the scheme of rescaling bins for DW/Q2 terms
@@ -237,6 +259,7 @@ def test_q_scaling_isotropic_incoherent_spectrum(temperature_k, ref_modes, syste
     The difference with Mantid-Abins reference is smaller than exact
     calculation, if still larger than expected
     """
+
 
     modes = ref_modes[system]
 
@@ -263,7 +286,7 @@ def test_q_scaling_isotropic_incoherent_spectrum(temperature_k, ref_modes, syste
     assert_allclose(
         spectrum.y_data.magnitude,
         ref_intensity[0] / bin_width.magnitude,
-        rtol=2e-3,
+        rtol=1e-8,
     )
 
 
