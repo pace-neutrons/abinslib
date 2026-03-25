@@ -1,0 +1,13 @@
+abins_kwargs:
+  AbInitioProgram: "JSON"
+  TemperatureInKelvin: 10
+  Atoms: ""
+  SaveAscii: false
+  SumContributions: true
+  ScaleByCrossSection: "Total"
+  QuantumOrderEventsNumber: "1"
+  Autoconvolution: false
+  EnergyUnits: "meV"
+  BinWidthInWavenumber: 1.1
+  Instrument: "TOSCA"
+  Setting: "Backward (TOSCA)"

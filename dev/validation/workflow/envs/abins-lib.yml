@@ -1,0 +1,8 @@
+name: abins-lib
+
+channels:
+  - conda-forge
+
+dependencies:
+  - pip:
+    - ../../../../../abins-lib
