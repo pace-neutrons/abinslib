@@ -51,7 +51,7 @@ def calculate_bose_factor(
 
 
 def _zero_t_bose_factor(
-        frequencies: Quantity, occupation: BoseOccupation
+    frequencies: Quantity, occupation: BoseOccupation
 ) -> np.ndarray:
     """Get ideal occupation values if T=0, avoiding divide-by-zero"""
     match occupation:
