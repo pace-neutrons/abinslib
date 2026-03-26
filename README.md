@@ -7,7 +7,7 @@ Dynamical structure factor calculations
 
 This is still an experimental playground, please do not use for production.
 
-## Testing
+## Testing and linting
 
 Install with testing dependency group, e.g. from this directory
 
@@ -22,6 +22,9 @@ pytest
 ```
 
 You may need to update Pip to access the `--group` feature.
+
+As well as unit testing, code contributions must pass linting with
+`ruff check` and `ruff format`.
 
 ## Validation status
 
