@@ -12,7 +12,7 @@ def test_import() -> None:
 
 
 def test_testdata() -> None:
-    datafile = ref_data / "GaSb_abins_isotropic_raw.npz"
+    datafile = ref_data / "GaSb_abins_10k_isotropic_raw.npz"
     data = np.load(datafile)
 
     assert "energy" in data.keys()

@@ -1,0 +1,45 @@
+configfile: "config/config.yml"
+
+
+rule all:
+    input:
+        expand("results/plot.png"),
+
+
+rule validate_isotropic_fundamentals_like_mantid:
+    input:
+        "results/ethanol_mantid_isotropic_fundamentals.json",
+        "results/ethanol_isotropic_fundamentals.json",
+    output:
+        "results/plot.png",
+    conda:
+        "envs/mantid.yml"
+    script:
+        "scripts/plot_fundamentals.py"
+
+
+rule write_isotropic_fundamentals_mantid:
+    input:
+        "data/{label}_qpoint_phonon_modes.json",
+    output:
+        "results/{label}_mantid_isotropic_fundamentals.json",
+    conda:
+        "envs/mantid.yml"
+    params:
+        raw=True,
+        isotropic=True,
+        abins_kwargs=config["abins_kwargs"],
+    script:
+        "scripts/write_mantid_fundamentals.py"
+
+
+rule write_isotropic_fundamentals:
+    input:
+        "data/{label}_qpoint_phonon_modes.json",
+        "results/{label}_mantid_isotropic_fundamentals.json",
+    output:
+        "results/{label}_isotropic_fundamentals.json",
+    conda:
+        "envs/abins-lib.yml"
+    script:
+        "scripts/write_isotropic_fundamentals.py"

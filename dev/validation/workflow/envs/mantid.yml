@@ -1,0 +1,9 @@
+name: mantid
+
+channels:
+  - mantid
+  - conda-forge
+
+dependencies:
+  - mantid=6.15
+  - matplotlib-base

@@ -1,7 +1,7 @@
 from tempfile import TemporaryDirectory
 
+from euphonic import Quantity, Spectrum1D
 import mantid.simpleapi
-import numpy as np
 from snakemake.script import snakemake
 
 import abins.parameters
@@ -28,9 +28,14 @@ with TemporaryDirectory() as tmpdir:
 
 workspace = mantid.simpleapi.mtd[f"{WORKSPACE}_total"]
 energy = workspace.getAxis(0).extractValues()
+bin_width = energy[1] - energy[0]
 energy_unit = workspace.getAxis(0).getUnit().symbol().ascii()
-intensity = workspace.extractY()
+intensity = workspace.extractY()[0] / bin_width
 
-np.savez(
-    snakemake.output[0], energy=energy, energy_unit=energy_unit, intensity=intensity
+spectrum = Spectrum1D(
+    Quantity(energy, str(energy_unit)),
+    Quantity(intensity, f"barn / {energy_unit}"),
+    metadata={"temperature": str(abins_kwargs["TemperatureInKelvin"])},
 )
+
+spectrum.to_json_file(snakemake.output[0])

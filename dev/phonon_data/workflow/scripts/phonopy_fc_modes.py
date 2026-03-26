@@ -15,7 +15,7 @@ weights = np.array(snakemake.params["weights"])
 modes = fc.calculate_qpoint_phonon_modes(
     qpts=qpts,
     weights=weights,
-    asr='reciprocal',
+    asr="reciprocal",
 )
 
 modes.to_json_file(snakemake.output[0])

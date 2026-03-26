@@ -19,4 +19,4 @@ abins_kwargs:
   QuantumOrderEventsNumber: "1"
   Autoconvolution: false
   EnergyUnits: "meV"
-  BinWidthInWavenumber: 1
+  BinWidthInWavenumber: 1.4
