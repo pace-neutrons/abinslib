@@ -18,6 +18,9 @@ def calculate_indirect_q2(
         final_energy: energy of detected neutrons (i.e. after monochromator)
 
     """
+    # Get rid of ambiguous cm-1 units before manipulating energies
+    energy_transfer = energy_transfer.to("meV", "spectroscopy")
+    final_energy = final_energy.to("meV", "spectroscopy")
 
     # E = hbar^2 k^2 / 2m
     momentum2_to_energy = Quantity(0.5, "hbar^2 / neutron_mass").to("meV Å^2")
