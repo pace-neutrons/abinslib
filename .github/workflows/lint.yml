@@ -21,6 +21,7 @@ jobs:
       - name: Install linting requirements
         shell: bash -el {0}
         run: |
+          pip install --upgrade pip
           pip install --group lint
 
       - name: ruff check
