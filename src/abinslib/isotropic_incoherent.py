@@ -22,10 +22,12 @@ def _get_total_cross_sections(crystal: Crystal) -> Quantity:
         collection="BlueBook", physical_property="incoherent_cross_section"
     )
     return Quantity(
-        [xs_coh_data[symbol].to("barn").magnitude
-         + xs_inc_data[symbol].to("barn").magnitude
-         for symbol in crystal.atom_type],
-        "barn"
+        [
+            xs_coh_data[symbol].to("barn").magnitude
+            + xs_inc_data[symbol].to("barn").magnitude
+            for symbol in crystal.atom_type
+        ],
+        "barn",
     )
 
 
@@ -49,9 +51,9 @@ def calculate_mode_displacements(
     mask = frequencies > frequency_min.to("hartree").magnitude
 
     bose_factor = calculate_bose_factor(
-            modes.frequencies,
-            temperature,
-            occupation=occupation,
+        modes.frequencies,
+        temperature,
+        occupation=occupation,
     )
 
     mode_displacements = np.zeros(
@@ -67,7 +69,7 @@ def calculate_mode_displacements(
         )
 
         mode_displacements[q_index] = np.einsum(
-           "j,i,i,ijkl->ijkl",
+            "j,i,i,ijkl->ijkl",
             1 / (2 * modes.crystal.atom_mass.to("m_e").magnitude),
             bose_factor[q_index] / frequencies[q_index],
             mask[q_index],
@@ -144,7 +146,7 @@ def calculate_isotropic_incoherent_fundamentals(
     if include_dw:
         dw_factor = calculate_isotropic_dw_factor(atomic_displacements, nominal_q2)
     else:
-        dw_factor = 1.
+        dw_factor = 1.0
 
     return intensities * dw_factor
 
@@ -271,9 +273,9 @@ def q_scaling_isotropic_incoherent_spectra(
     if not isinstance(spectra, Spectrum1DCollection):
         raise TypeError("Only 1D spectra supported at this point")
 
-    if any(map(
-            (lambda metadata: metadata["quantum_order"] != 1),
-            spectra.iter_metadata())):
+    if any(
+        map((lambda metadata: metadata["quantum_order"] != 1), spectra.iter_metadata())
+    ):
         raise ValueError("Only order 1 supported at this point")
 
     # More generally this factor is Q^2N / N!
