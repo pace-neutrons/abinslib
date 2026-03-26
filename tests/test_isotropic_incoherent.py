@@ -2,7 +2,6 @@ from itertools import product
 from pathlib import Path
 
 from euphonic import Crystal, QpointPhononModes, Quantity
-from euphonic.spectra import Spectrum1DCollection
 import numpy as np
 from numpy.testing import assert_allclose
 import pytest
@@ -12,7 +11,6 @@ from abinslib.isotropic_incoherent import (
     calculate_atomic_displacements,
     calculate_mode_displacements,
     calculate_isotropic_dw_factor,
-    calculate_isotropic_incoherent_fundamentals,
     calculate_isotropic_incoherent_spectra,
     q_scaling_isotropic_incoherent_spectra,
 )
