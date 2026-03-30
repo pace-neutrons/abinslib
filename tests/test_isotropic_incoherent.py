@@ -8,9 +8,8 @@ import pytest
 
 import abinslib.isotropic_incoherent
 from abinslib.bose import BoseOccupation
+from abinslib.displacements import calculate_atomic_displacements, calculate_mode_displacements
 from abinslib.isotropic_incoherent import (
-    calculate_atomic_displacements,
-    calculate_mode_displacements,
     calculate_isotropic_dw_factor,
     calculate_isotropic_incoherent_spectra,
     q_scaling_isotropic_incoherent_spectra,
@@ -51,6 +50,18 @@ def patch_cross_sections(monkeypatch):
         "_get_total_cross_sections",
         _get_mantid_total_cross_sections,
     )
+
+
+def test_isotropic_dw(ref_modes):
+    """Check isotropic DW on Q2 mesh agrees with Mantid-Abins"""
+    gasb_modes = ref_modes["GaSb"]
+    dw_data = np.load(test_data / "GaSb_abins_isotropic_dw.npz")
+    q2 = Quantity(dw_data["q2"], "angstrom^-2")
+
+    a = calculate_atomic_displacements(gasb_modes, temperature=Quantity(100, "kelvin"))
+
+    binned_dw_factor = calculate_isotropic_dw_factor(a, q2[None, :])
+    assert_allclose(binned_dw_factor[0], dw_data["iso_dw"].transpose(), rtol=1e-6)
 
 
 @pytest.mark.parametrize(
@@ -136,15 +147,3 @@ def test_q_scaling_isotropic_incoherent_spectrum(
         ref_intensity[0] / bin_width.magnitude,
         rtol=1e-8,
     )
-
-
-def test_isotropic_dw(ref_modes):
-    """Check isotropic DW on Q2 mesh agrees with Mantid-Abins"""
-    gasb_modes = ref_modes["GaSb"]
-    dw_data = np.load(test_data / "GaSb_abins_isotropic_dw.npz")
-    q2 = Quantity(dw_data["q2"], "angstrom^-2")
-
-    a = calculate_atomic_displacements(gasb_modes, temperature=Quantity(100, "kelvin"))
-
-    binned_dw_factor = calculate_isotropic_dw_factor(a, q2[None, :])
-    assert_allclose(binned_dw_factor[0], dw_data["iso_dw"].transpose(), rtol=1e-6)

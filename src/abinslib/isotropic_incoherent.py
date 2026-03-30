@@ -6,20 +6,8 @@ from euphonic.crystal import Crystal
 from euphonic.spectra import Spectrum1DCollection
 import numpy as np
 
-from .displacements import calculate_atomic_displacements, calculate_mode_displacements
-
 if TYPE_CHECKING:
     from euphonic import QpointPhononModes
-
-
-__all__ = [
-    "calculate_atomic_displacements",
-    "calculate_mode_displacements",
-    "calculate_isotropic_incoherent_fundamentals",
-    "calculate_isotropic_dw_factor",
-    "calculate_isotropic_incoherent_spectra",
-    "q_scaling_isotropic_incoherent_spectra",
-]
 
 
 def _get_total_cross_sections(crystal: Crystal) -> Quantity:

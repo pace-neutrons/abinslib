@@ -8,7 +8,7 @@ from numpy.testing import assert_allclose
 import pytest
 
 from abinslib.bose import BoseOccupation
-from abinslib.isotropic_incoherent import (
+from abinslib.displacements import (
     calculate_atomic_displacements,
     calculate_mode_displacements,
 )
