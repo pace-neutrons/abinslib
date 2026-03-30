@@ -29,7 +29,6 @@ def _get_total_cross_sections(crystal: Crystal) -> Quantity:
     )
 
 
-
 def calculate_isotropic_incoherent_fundamentals(
     modes: QpointPhononModes,
     mode_displacements: Quantity,

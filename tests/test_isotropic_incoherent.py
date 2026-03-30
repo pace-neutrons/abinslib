@@ -8,7 +8,10 @@ import pytest
 
 import abinslib.isotropic_incoherent
 from abinslib.bose import BoseOccupation
-from abinslib.displacements import calculate_atomic_displacements, calculate_mode_displacements
+from abinslib.displacements import (
+    calculate_atomic_displacements,
+    calculate_mode_displacements,
+)
 from abinslib.isotropic_incoherent import (
     calculate_isotropic_dw_factor,
     calculate_isotropic_incoherent_spectra,

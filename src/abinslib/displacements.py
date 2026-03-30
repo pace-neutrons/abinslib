@@ -16,6 +16,7 @@ downcased to 'b' and 'a' in python variable names.
 The preferred data type for A is the DebyeWaller class from Euphonic.
 
 """
+
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
