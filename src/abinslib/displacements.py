@@ -134,7 +134,7 @@ class Displacements:
             n_atoms = self.displacements.shape[2]
             cell_vectors = Quantity(np.eye(3), "Å")
             atom_r = np.zeros((n_atoms, 3))
-            atom_type = np.array([''] * n_atoms)
+            atom_type = np.array([""] * n_atoms)
             atom_mass = Quantity(np.zeros(n_atoms), "amu")
             crystal = Crystal(cell_vectors, atom_r, atom_type, atom_mass)
 
@@ -190,4 +190,3 @@ def _calculate_mode_displacements(
         modes.crystal.cell_vectors_unit + "**2"
     )
     return mode_displacements
-

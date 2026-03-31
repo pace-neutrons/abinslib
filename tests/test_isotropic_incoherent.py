@@ -60,7 +60,9 @@ def test_isotropic_dw(ref_modes):
     dw_data = np.load(test_data / "GaSb_abins_isotropic_dw.npz")
     q2 = Quantity(dw_data["q2"], "angstrom^-2")
 
-    a = Displacements.from_modes(gasb_modes, temperature=Quantity(100, "kelvin")).to_atomic_displacements()
+    a = Displacements.from_modes(
+        gasb_modes, temperature=Quantity(100, "kelvin")
+    ).to_atomic_displacements()
 
     binned_dw_factor = calculate_isotropic_dw_factor(a, q2[None, :])
     assert_allclose(binned_dw_factor[0], dw_data["iso_dw"].transpose(), rtol=1e-6)

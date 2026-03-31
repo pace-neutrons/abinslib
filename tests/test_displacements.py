@@ -7,7 +7,6 @@ import numpy as np
 from numpy.testing import assert_allclose
 import pytest
 
-from abinslib.bose import BoseOccupation
 from abinslib.displacements import Displacements
 
 test_data = Path(__file__).parent / "data"
@@ -41,7 +40,9 @@ def test_calculate_adp(ref_modes):
     """
     gasb_modes = ref_modes["GaSb"]
 
-    dw = Displacements.from_modes(gasb_modes, temperature=Quantity(100, "K")).to_atomic_displacements(crystal=gasb_modes.crystal)
+    dw = Displacements.from_modes(
+        gasb_modes, temperature=Quantity(100, "K")
+    ).to_atomic_displacements(crystal=gasb_modes.crystal)
 
     euphonic_dw = gasb_modes.calculate_debye_waller(
         temperature=Quantity(100, "K"),
@@ -73,7 +74,9 @@ def test_a_abins_ref(ref_modes) -> None:
     gasb_modes = ref_modes["GaSb"]
     ref_a_traces = np.load(test_data / "GaSb_abins_isotropic_dw.npz")["a_traces"]
 
-    dw = Displacements.from_modes(gasb_modes, temperature=Quantity(100, "K")).to_atomic_displacements()
+    dw = Displacements.from_modes(
+        gasb_modes, temperature=Quantity(100, "K")
+    ).to_atomic_displacements()
     assert_allclose(
         np.trace(dw.debye_waller.to("angstrom^2").magnitude, axis1=1, axis2=2),
         ref_a_traces / 2,
