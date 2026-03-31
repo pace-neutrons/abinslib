@@ -84,7 +84,6 @@ class Displacements:
                 modes,
                 temperature,
                 frequency_min,
-                occupation=BoseOccupation.ONE,
             ),
             weights=modes.weights,
             bose_n=bose_factor,
@@ -154,7 +153,6 @@ def _calculate_mode_displacements(
     modes: QpointPhononModes,
     temperature: Quantity,
     frequency_min: Quantity = Quantity(10, "cm_1"),
-    occupation: BoseOccupation = BoseOccupation.N_PLUS_ONE,
 ) -> Quantity:
     """Get the 3x3 displacement tensor (B) for each atom and phonon mode
 
@@ -169,12 +167,6 @@ def _calculate_mode_displacements(
     # Boolean mask of modes to include (i.e. frequency over threshold)
     mask = frequencies > frequency_min.to("hartree").magnitude
 
-    bose_factor = calculate_bose_factor(
-        modes.frequencies,
-        temperature,
-        occupation=occupation,
-    )
-
     mode_displacements = np.zeros(
         [*modes.frequencies.shape, modes.crystal.n_atoms, 3, 3]
     )
@@ -188,10 +180,9 @@ def _calculate_mode_displacements(
         )
 
         mode_displacements[q_index] = np.einsum(
-            "j,i,i,ijkl->ijkl",
+            "j,i,ijkl->ijkl",
             1 / (2 * modes.crystal.atom_mass.to("m_e").magnitude),
-            bose_factor[q_index] / frequencies[q_index],
-            mask[q_index],
+            mask[q_index] / frequencies[q_index],
             evec_term,
         )
 
