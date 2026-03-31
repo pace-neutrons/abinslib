@@ -80,7 +80,7 @@ class Displacements:
         )
 
         return cls(
-            displacements=calculate_mode_displacements(
+            displacements=_calculate_mode_displacements(
                 modes,
                 temperature,
                 frequency_min,
@@ -150,7 +150,7 @@ class Displacements:
         )
 
 
-def calculate_mode_displacements(
+def _calculate_mode_displacements(
     modes: QpointPhononModes,
     temperature: Quantity,
     frequency_min: Quantity = Quantity(10, "cm_1"),

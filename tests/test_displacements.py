@@ -8,10 +8,7 @@ from numpy.testing import assert_allclose
 import pytest
 
 from abinslib.bose import BoseOccupation
-from abinslib.displacements import (
-    calculate_mode_displacements,
-    Displacements,
-)
+from abinslib.displacements import Displacements
 
 test_data = Path(__file__).parent / "data"
 
@@ -93,15 +90,14 @@ def test_displacements_abins_ref(temperature_k, ref_modes) -> None:
 
     """
     gasb_modes = ref_modes["GaSb"]
-    b = calculate_mode_displacements(
+    b = Displacements.from_modes(
         gasb_modes,
         temperature=Quantity(temperature_k, "kelvin"),
-        occupation=BoseOccupation.N_PLUS_ONE,
     )
 
     ref_b = np.load(test_data / f"GaSb_abins_{temperature_k}k_B.npz")
 
     assert_allclose(
-        b.to("angstrom^2").magnitude[1],
+        b.n_plus_one.to("angstrom^2").magnitude[1],
         np.swapaxes(ref_b["qpt-1"], 0, 1),
     )
