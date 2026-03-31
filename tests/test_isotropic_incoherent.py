@@ -88,14 +88,8 @@ def test_calculate_isotropic_incoherent_spectrum(
 
     ref_intensity = ref_data["intensity"]
 
-    b = Displacements.from_modes(
-        modes=modes, temperature=temperature, occupation=BoseOccupation.N_PLUS_ONE
-    )
-
-    a = calculate_atomic_displacements(
-        modes,
-        temperature=temperature,
-    )
+    b = Displacements.from_modes(modes=modes, temperature=temperature)
+    a = calculate_atomic_displacements(modes, temperature=temperature)
 
     # Q2 calculated at exact Mantid-Abins TOSCA backscattering angle
     q2 = Quantity(np.load(test_data / f"{system}_modes_q2.npy"), "angstrom^-2")
@@ -134,14 +128,8 @@ def test_q_scaling_isotropic_incoherent_spectrum(
 
     ref_intensity = ref_data["intensity"]
 
-    b = Displacements.from_modes(
-        modes=modes, temperature=temperature, occupation=BoseOccupation.N_PLUS_ONE
-    )
-
-    a = calculate_atomic_displacements(
-        modes,
-        temperature=temperature,
-    )
+    b = Displacements.from_modes(modes=modes, temperature=temperature)
+    a = calculate_atomic_displacements(modes, temperature=temperature)
     q2 = Quantity(np.load(test_data / "abins-q2-1_4-dump.npy"), "Å^-2")
 
     spectra = q_scaling_isotropic_incoherent_spectra(modes, b, a, q2, bins)

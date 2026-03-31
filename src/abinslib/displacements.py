@@ -48,27 +48,22 @@ class Displacements:
 
     Parameters
     ----------
-    mode_displacements:
+    displacements:
       Atomic displacement tensor Quantity with dimensions (qpts, modes, atoms, 3, 3)
-      and units length^2
+      and units length^2, without Bose occupation factor
     weights:
       Normalised q-point weights corresponding to axis 0 of mode_displacements
-    temperature:
-      Temperature at which Bose occupations were calculated
-    occupation:
-      Bose Occupation type (N, N+1 or 2N+1)
-
+    bose_n:
+      Bose factors <n> corresponding to displacements at target temperature
     """
 
-    mode_displacements: Quantity
-    weights: np.array
-    temperature: Quantity
-    occupation: BoseOccupation
+    displacements: Quantity
+    weights: np.ndarray
+    bose_n: np.ndarray
 
     def __post_init__(self):
         """Make the underlying numpy array read-only so caching is safe"""
-        self.mode_displacements.setflags(write=False)
-
+        self.displacements.setflags(write=False)
 
     @classmethod
     def from_modes(
@@ -76,33 +71,35 @@ class Displacements:
         modes: QpointPhononModes,
         temperature: Quantity,
         frequency_min: Quantity = Quantity(10, "cm_1"),
-        occupation: BoseOccupation = BoseOccupation.N_PLUS_ONE,
     ) -> Self:
-        return cls(
-            mode_displacements=calculate_mode_displacements(
-                modes, temperature, frequency_min, occupation
-            ),
-            weights=modes.weights,
-            temperature=temperature,
-            occupation=occupation,
+        bose_factor = calculate_bose_factor(
+            modes.frequencies,
+            temperature,
+            occupation=BoseOccupation.N,
         )
 
-    def _get_occupied_displacements(self, occupation: BoseOccupation) -> Quantity:
-        if self.occupation != occupation:
-            raise ValueError()
-        return self.mode_displacements
+        return cls(
+            displacements=calculate_mode_displacements(
+                modes, temperature, frequency_min, occupation=BoseOccupation.ONE,
+            ),
+            weights=modes.weights,
+            bose_n = bose_factor
+        )
+
+    def one(self) -> Quantity:
+        return self.displacements
 
     @cached_property
     def n(self) -> Quantity:
-        return self._get_occupied_displacements(BoseOccupation.N)
+        return np.einsum('ij,ij...->ij...', self.bose_n, self.displacements)
 
     @cached_property
     def n_plus_one(self) -> Quantity:
-        return self._get_occupied_displacements(BoseOccupation.N_PLUS_ONE)
+        return np.einsum('ij,ij...->ij...', self.bose_n + 1.0, self.displacements)
 
     @cached_property
     def two_n_plus_one(self) -> Quantity:
-        return self._get_occupied_displacements(BoseOccupation.TWO_N_PLUS_ONE)
+        return np.einsum('ij,ij...->ij...', 2.0 * self.bose_n + 1.0, self.displacements)
 
 
 def calculate_mode_displacements(
