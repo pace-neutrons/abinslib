@@ -65,6 +65,11 @@ class Displacements:
     temperature: Quantity
     occupation: BoseOccupation
 
+    def __post_init__(self):
+        """Make the underlying numpy array read-only so caching is safe"""
+        self.mode_displacements.setflags(write=False)
+
+
     @classmethod
     def from_modes(
         cls: Self,
