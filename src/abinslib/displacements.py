@@ -80,10 +80,13 @@ class Displacements:
 
         return cls(
             displacements=calculate_mode_displacements(
-                modes, temperature, frequency_min, occupation=BoseOccupation.ONE,
+                modes,
+                temperature,
+                frequency_min,
+                occupation=BoseOccupation.ONE,
             ),
             weights=modes.weights,
-            bose_n = bose_factor
+            bose_n=bose_factor,
         )
 
     def one(self) -> Quantity:
@@ -91,15 +94,15 @@ class Displacements:
 
     @cached_property
     def n(self) -> Quantity:
-        return np.einsum('ij,ij...->ij...', self.bose_n, self.displacements)
+        return np.einsum("ij,ij...->ij...", self.bose_n, self.displacements)
 
     @cached_property
     def n_plus_one(self) -> Quantity:
-        return np.einsum('ij,ij...->ij...', self.bose_n + 1.0, self.displacements)
+        return np.einsum("ij,ij...->ij...", self.bose_n + 1.0, self.displacements)
 
     @cached_property
     def two_n_plus_one(self) -> Quantity:
-        return np.einsum('ij,ij...->ij...', 2.0 * self.bose_n + 1.0, self.displacements)
+        return np.einsum("ij,ij...->ij...", 2.0 * self.bose_n + 1.0, self.displacements)
 
 
 def calculate_mode_displacements(

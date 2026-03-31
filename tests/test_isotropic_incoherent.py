@@ -6,8 +6,8 @@ import numpy as np
 from numpy.testing import assert_allclose
 import pytest
 
+
 import abinslib.isotropic_incoherent
-from abinslib.bose import BoseOccupation
 from abinslib.displacements import (
     Displacements,
     calculate_atomic_displacements,
