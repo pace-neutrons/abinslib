@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from functools import cached_property
 from typing import Self, TYPE_CHECKING
 
-from euphonic import DebyeWaller, Quantity
+from euphonic import Crystal, DebyeWaller, Quantity
 import numpy as np
 
 from .bose import BoseOccupation, calculate_bose_factor
@@ -60,6 +60,7 @@ class Displacements:
     displacements: Quantity
     weights: np.ndarray
     bose_n: np.ndarray
+    temperature: Quantity
 
     def __post_init__(self):
         """Make the underlying numpy array read-only so caching is safe"""
@@ -87,6 +88,7 @@ class Displacements:
             ),
             weights=modes.weights,
             bose_n=bose_factor,
+            temperature=temperature,
         )
 
     def one(self) -> Quantity:
@@ -103,6 +105,49 @@ class Displacements:
     @cached_property
     def two_n_plus_one(self) -> Quantity:
         return np.einsum("ij,ij...->ij...", 2.0 * self.bose_n + 1.0, self.displacements)
+
+    def to_atomic_displacements(
+        self,
+        *,
+        crystal: Crystal | None = None,
+    ) -> DebyeWaller:
+        """Calculate atomic displacement tensor (A) for each atom
+
+        The return type is a Euphonic DebyeWaller object: "DebyeWaller" in Euphonic
+        terminology is identical to A in CLIMAX terminology.
+        In Euphonic coherent scattering intensity calculations, the Debye—Waller
+        intensity factor appears as exp(-W_k) inside a square of sums.
+
+        In incoherent intensity calculations the Debye—Waller factor typically
+        appears as a pure factor exp(-2W_k).
+
+        In both cases W_k is the displacement tensor of an atom summed over all
+        phonon modes - i.e. "A".
+
+        Parameters
+        ----------
+        crystal
+          If provided, this is attached to output DebyeWaller data. Otherwise,
+          a dummy dataset is produced.
+
+        """
+        if crystal is None:
+            n_atoms = self.displacements.shape[2]
+            cell_vectors = Quantity(np.eye(3), "Å")
+            atom_r = np.zeros((n_atoms, 3))
+            atom_type = np.array([''] * n_atoms)
+            atom_mass = Quantity(np.zeros(n_atoms), "amu")
+            crystal = Crystal(cell_vectors, atom_r, atom_type, atom_mass)
+
+        dw = np.einsum(
+            "ijklm,i->klm",
+            self.two_n_plus_one.magnitude,
+            self.weights * 0.5,  # q-point symm weights, /2 scale convention for W
+        )
+
+        return DebyeWaller(
+            crystal, Quantity(dw, self.displacements.units), self.temperature
+        )
 
 
 def calculate_mode_displacements(
@@ -155,39 +200,3 @@ def calculate_mode_displacements(
     )
     return mode_displacements
 
-
-def calculate_atomic_displacements(
-    modes: QpointPhononModes,
-    temperature: Quantity,
-    mode_displacements: Quantity | None = None,
-) -> DebyeWaller:
-    """Calculate atomic displacement tensor (A) for each atom
-
-    The return type is a Euphonic DebyeWaller object: "DebyeWaller" in Euphonic
-    terminology is identical to A in CLIMAX terminology.
-    In Euphonic coherent scattering intensity calculations, the Debye—Waller
-    intensity factor appears as exp(-W_k) inside a square of sums.
-
-    In incoherent intensity calculations the Debye—Waller factor typically
-    appears as a pure factor exp(-2W_k).
-
-    In both cases W_k is the displacement tensor of an atom summed over all
-    phonon modes - i.e. "A".
-
-    """
-    if mode_displacements is None:
-        mode_displacements = calculate_mode_displacements(
-            modes=modes,
-            temperature=temperature,
-            occupation=BoseOccupation.TWO_N_PLUS_ONE,
-        )
-
-    dw = np.einsum(
-        "ijklm,i->klm",
-        mode_displacements.magnitude,
-        modes.weights * 0.5,  # q-point symm weights, /2 scale convention for W
-    )
-
-    return DebyeWaller(
-        modes.crystal, Quantity(dw, mode_displacements.units), temperature
-    )

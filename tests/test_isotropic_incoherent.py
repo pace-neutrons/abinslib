@@ -10,7 +10,6 @@ import pytest
 import abinslib.isotropic_incoherent
 from abinslib.displacements import (
     Displacements,
-    calculate_atomic_displacements,
 )
 from abinslib.isotropic_incoherent import (
     calculate_isotropic_dw_factor,
@@ -61,7 +60,7 @@ def test_isotropic_dw(ref_modes):
     dw_data = np.load(test_data / "GaSb_abins_isotropic_dw.npz")
     q2 = Quantity(dw_data["q2"], "angstrom^-2")
 
-    a = calculate_atomic_displacements(gasb_modes, temperature=Quantity(100, "kelvin"))
+    a = Displacements.from_modes(gasb_modes, temperature=Quantity(100, "kelvin")).to_atomic_displacements()
 
     binned_dw_factor = calculate_isotropic_dw_factor(a, q2[None, :])
     assert_allclose(binned_dw_factor[0], dw_data["iso_dw"].transpose(), rtol=1e-6)
@@ -89,7 +88,7 @@ def test_calculate_isotropic_incoherent_spectrum(
     ref_intensity = ref_data["intensity"]
 
     b = Displacements.from_modes(modes=modes, temperature=temperature)
-    a = calculate_atomic_displacements(modes, temperature=temperature)
+    a = b.to_atomic_displacements(crystal=modes.crystal)
 
     # Q2 calculated at exact Mantid-Abins TOSCA backscattering angle
     q2 = Quantity(np.load(test_data / f"{system}_modes_q2.npy"), "angstrom^-2")
@@ -129,7 +128,7 @@ def test_q_scaling_isotropic_incoherent_spectrum(
     ref_intensity = ref_data["intensity"]
 
     b = Displacements.from_modes(modes=modes, temperature=temperature)
-    a = calculate_atomic_displacements(modes, temperature=temperature)
+    a = b.to_atomic_displacements()
     q2 = Quantity(np.load(test_data / "abins-q2-1_4-dump.npy"), "Å^-2")
 
     spectra = q_scaling_isotropic_incoherent_spectra(modes, b, a, q2, bins)
