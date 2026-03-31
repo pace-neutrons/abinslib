@@ -8,6 +8,7 @@ import numpy as np
 
 if TYPE_CHECKING:
     from euphonic import QpointPhononModes
+    from . import Displacements
 
 
 def _get_total_cross_sections(crystal: Crystal) -> Quantity:
@@ -77,7 +78,7 @@ def calculate_isotropic_dw_factor(
 
 def calculate_isotropic_incoherent_spectra(
     modes: QpointPhononModes,
-    mode_displacements: Quantity,
+    mode_displacements: Displacements,
     atomic_displacements: DebyeWaller,
     nominal_q2: Quantity,
     bins: Quantity,
@@ -99,7 +100,7 @@ def calculate_isotropic_incoherent_spectra(
 
     intensities = calculate_isotropic_incoherent_fundamentals(
         modes=modes,
-        mode_displacements=mode_displacements,
+        mode_displacements=mode_displacements.n_plus_one,
         atomic_displacements=atomic_displacements,
         nominal_q2=nominal_q2,
         include_dw=include_dw,
@@ -148,7 +149,7 @@ def calculate_isotropic_incoherent_spectra(
 
 def q_scaling_isotropic_incoherent_spectra(
     modes: QpointPhononModes,
-    mode_displacements: Quantity,
+    mode_displacements: Displacements,
     atomic_displacements: DebyeWaller,
     nominal_q2: Quantity,
     bins: Quantity,

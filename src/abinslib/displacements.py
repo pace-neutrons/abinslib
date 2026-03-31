@@ -18,7 +18,9 @@ The preferred data type for A is the DebyeWaller class from Euphonic.
 """
 
 from __future__ import annotations
-from typing import TYPE_CHECKING
+from dataclasses import dataclass
+from functools import cached_property
+from typing import Self, TYPE_CHECKING
 
 from euphonic import DebyeWaller, Quantity
 import numpy as np
@@ -30,11 +32,79 @@ if TYPE_CHECKING:
     from euphonic import QpointPhononModes
 
 
+@dataclass(frozen=True)
+class Displacements:
+    """Atomic displacement dataset
+
+    Current features:
+    - access Bose-weighted displacements through cached properties
+
+    Soon:
+    - compute other weights on-the-fly
+
+    Maybe:
+    - Allow slicing by qpt, atom and/or mode index
+      - return a View object that automatically slices from cached parent data?
+
+    Parameters
+    ----------
+    mode_displacements:
+      Atomic displacement tensor Quantity with dimensions (qpts, modes, atoms, 3, 3)
+      and units length^2
+    weights:
+      Normalised q-point weights corresponding to axis 0 of mode_displacements
+    temperature:
+      Temperature at which Bose occupations were calculated
+    occupation:
+      Bose Occupation type (N, N+1 or 2N+1)
+
+    """
+
+    mode_displacements: Quantity
+    weights: np.array
+    temperature: Quantity
+    occupation: BoseOccupation
+
+    @classmethod
+    def from_modes(
+        cls: Self,
+        modes: QpointPhononModes,
+        temperature: Quantity,
+        frequency_min: Quantity = Quantity(10, "cm_1"),
+        occupation: BoseOccupation = BoseOccupation.N_PLUS_ONE,
+    ) -> Self:
+        return cls(
+            mode_displacements=calculate_mode_displacements(
+                modes, temperature, frequency_min, occupation
+            ),
+            weights=modes.weights,
+            temperature=temperature,
+            occupation=occupation,
+        )
+
+    def _get_occupied_displacements(self, occupation: BoseOccupation) -> Quantity:
+        if self.occupation != occupation:
+            raise ValueError()
+        return self.mode_displacements
+
+    @cached_property
+    def n(self) -> Quantity:
+        return self._get_occupied_displacements(BoseOccupation.N)
+
+    @cached_property
+    def n_plus_one(self) -> Quantity:
+        return self._get_occupied_displacements(BoseOccupation.N_PLUS_ONE)
+
+    @cached_property
+    def two_n_plus_one(self) -> Quantity:
+        return self._get_occupied_displacements(BoseOccupation.TWO_N_PLUS_ONE)
+
+
 def calculate_mode_displacements(
     modes: QpointPhononModes,
     temperature: Quantity,
     frequency_min: Quantity = Quantity(10, "cm_1"),
-    occupation: BoseOccupation = BoseOccupation.TWO_N_PLUS_ONE,
+    occupation: BoseOccupation = BoseOccupation.N_PLUS_ONE,
 ) -> Quantity:
     """Get the 3x3 displacement tensor (B) for each atom and phonon mode
 

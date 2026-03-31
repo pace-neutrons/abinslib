@@ -9,6 +9,7 @@ import pytest
 import abinslib.isotropic_incoherent
 from abinslib.bose import BoseOccupation
 from abinslib.displacements import (
+    Displacements,
     calculate_atomic_displacements,
     calculate_mode_displacements,
 )
@@ -88,9 +89,8 @@ def test_calculate_isotropic_incoherent_spectrum(
 
     ref_intensity = ref_data["intensity"]
 
-    b = calculate_mode_displacements(
-        modes, temperature=temperature, occupation=BoseOccupation.N_PLUS_ONE
-    )
+    b = Displacements.from_modes(modes=modes, temperature=temperature, occupation=BoseOccupation.N_PLUS_ONE)
+
     a = calculate_atomic_displacements(
         modes,
         temperature=temperature,
@@ -133,9 +133,8 @@ def test_q_scaling_isotropic_incoherent_spectrum(
 
     ref_intensity = ref_data["intensity"]
 
-    b = calculate_mode_displacements(
-        modes, temperature=temperature, occupation=BoseOccupation.N_PLUS_ONE
-    )
+    b = Displacements.from_modes(modes=modes, temperature=temperature, occupation=BoseOccupation.N_PLUS_ONE)
+
     a = calculate_atomic_displacements(
         modes,
         temperature=temperature,
