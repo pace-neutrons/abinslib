@@ -164,8 +164,12 @@ def _calculate_mode_displacements(
     """
     frequencies = modes.frequencies.to("hartree").magnitude
 
-    # Boolean mask of modes to include (i.e. frequency over threshold)
+    # For very small frequencies scale by zero instead of inv freq.
+    # (i.e. remove pure translation/rotation modes)
     mask = frequencies > frequency_min.to("hartree").magnitude
+    inv_frequency = np.divide(
+        1.0, frequencies, out=np.zeros_like(frequencies), where=mask
+    )
 
     mode_displacements = np.zeros(
         [*modes.frequencies.shape, modes.crystal.n_atoms, 3, 3]
@@ -182,7 +186,7 @@ def _calculate_mode_displacements(
         mode_displacements[q_index] = np.einsum(
             "j,i,ijkl->ijkl",
             1 / (2 * modes.crystal.atom_mass.to("m_e").magnitude),
-            mask[q_index] / frequencies[q_index],
+            inv_frequency[q_index],
             evec_term,
         )
 
