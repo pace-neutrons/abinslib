@@ -34,27 +34,30 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class Displacements:
-    """Atomic displacement dataset
+    """Phonon mode displacement dataset
 
-    Current features:
-    - access Bose-weighted displacements through cached properties
+    This represents atomic displacements as 3x3 tensors, often denoted U or B.
+    The data is arranged by qpoint, phonon mode and atom.
 
-    Soon:
-    - compute other weights on-the-fly
-
-    Maybe:
-    - Allow slicing by qpt, atom and/or mode index
-      - return a View object that automatically slices from cached parent data?
+    Note that while the "displacements" attribute represents the underlying
+    data of a Displacements object, the data should be accessed by the "one",
+    "n", "n_plus_one" and "two_n_plus_one" properties which provide
+    displacements at corresponding Bose occupation values.
 
     Parameters
     ----------
     displacements:
-      Atomic displacement tensor Quantity with dimensions (qpts, modes, atoms, 3, 3)
-      and units length^2, without Bose occupation factor
+      Atomic displacement tensor Quantity with dimensions
+      (qpts, modes, atoms, 3, 3) and units length^2, without Bose occupation
+      factor. (i.e. with the same values as the "one" property on resulting
+      object.)
     weights:
       Normalised q-point weights corresponding to axis 0 of mode_displacements
     bose_n:
-      Bose factors <n> corresponding to displacements at target temperature
+      Bose factors <n> corresponding to displacements at target temperature.
+      Other occupations <1>, <n+1> and <2n+1> will be derived from these
+      values.
+
     """
 
     displacements: Quantity
@@ -112,9 +115,9 @@ class Displacements:
     ) -> DebyeWaller:
         """Calculate atomic displacement tensor (A) for each atom
 
-        The return type is a Euphonic DebyeWaller object: "DebyeWaller" in Euphonic
-        terminology is identical to A in CLIMAX terminology.
-        In Euphonic coherent scattering intensity calculations, the Debye—Waller
+        The return type is a Euphonic DebyeWaller object: "DebyeWaller" in
+        Euphonic terminology is identical to A in CLIMAX terminology.  In
+        Euphonic coherent scattering intensity calculations, the Debye—Waller
         intensity factor appears as exp(-W_k) inside a square of sums.
 
         In incoherent intensity calculations the Debye—Waller factor typically
