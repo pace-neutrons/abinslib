@@ -6,6 +6,7 @@ import numpy as np
 from numpy.testing import assert_allclose
 import pytest
 
+import abinslib.isotropic_incoherent
 from abinslib.isotropic_incoherent import (
     BoseOccupation,
     calculate_atomic_displacements,
@@ -31,7 +32,7 @@ def ref_modes() -> dict[str, QpointPhononModes]:
 
 
 @pytest.fixture
-def patch_cross_sections(mocker):
+def patch_cross_sections(monkeypatch):
     """Replace Euphonic cross-section lookup with Mantid values"""
 
     def _get_mantid_total_cross_sections(crystal: Crystal) -> Quantity:
@@ -45,9 +46,10 @@ def patch_cross_sections(mocker):
 
         return Quantity([mantid_data[symbol] for symbol in crystal.atom_type], "barn")
 
-    mocker.patch(
-        "abinslib.isotropic_incoherent._get_total_cross_sections",
-        wraps=_get_mantid_total_cross_sections,
+    monkeypatch.setattr(
+        abinslib.isotropic_incoherent,
+        "_get_total_cross_sections",
+        _get_mantid_total_cross_sections,
     )
 
 
