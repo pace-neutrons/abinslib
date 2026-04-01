@@ -162,33 +162,28 @@ def _calculate_mode_displacements(
     QpointPhononModes.calculate_debye_waller
 
     """
+    # Cast frequencies to atomic units -> displacement results in Bohr
     frequencies = modes.frequencies.to("hartree").magnitude
 
     # For very small frequencies scale by zero instead of inv freq.
     # (i.e. remove pure translation/rotation modes)
-    mask = frequencies > frequency_min.to("hartree").magnitude
     inv_frequency = np.divide(
-        1.0, frequencies, out=np.zeros_like(frequencies), where=mask
+        1.0,
+        frequencies,
+        out=np.zeros_like(frequencies),
+        where=(frequencies > frequency_min.to("hartree").magnitude),
     )
 
-    mode_displacements = np.zeros(
-        [*modes.frequencies.shape, modes.crystal.n_atoms, 3, 3]
+    evec_tensors = np.real(
+        np.einsum("ijkl,ijkm->ijklm", modes.eigenvectors, np.conj(modes.eigenvectors))
     )
 
-    # Euphonic DW does chunking here and works on multiple q-points at once.
-    # For now we do something simpler and iterate over q-points
-
-    for q_index, q_eigenvectors in enumerate(modes.eigenvectors):
-        evec_term = np.real(
-            np.einsum("ijk,ijl->ijkl", q_eigenvectors, np.conj(q_eigenvectors))
-        )
-
-        mode_displacements[q_index] = np.einsum(
-            "j,i,ijkl->ijkl",
-            1 / (2 * modes.crystal.atom_mass.to("m_e").magnitude),
-            inv_frequency[q_index],
-            evec_term,
-        )
+    mode_displacements = np.einsum(
+        "ij,k,ijklm->ijklm",
+        inv_frequency,
+        1 / (2 * modes.crystal.atom_mass.to("atomic_unit_of_mass").magnitude),
+        evec_tensors,
+    )
 
     mode_displacements = Quantity(mode_displacements, "bohr**2").to(
         modes.crystal.cell_vectors_unit + "**2"
