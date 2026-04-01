@@ -50,7 +50,7 @@ def calculate_isotropic_incoherent_fundamentals(
     """
     intensities = (
         nominal_q2.to("bohr^-2").magnitude[:, :, None]
-        * np.trace(mode_displacements.to("bohr^2").magnitude, axis1=-2, axis2=-1)
+        * np.einsum("...ii", mode_displacements.to("bohr^2").magnitude)
         / 3
     )
 
