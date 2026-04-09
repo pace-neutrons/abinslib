@@ -16,7 +16,8 @@ plot_1d_to_axis(
 )
 ax.legend()
 ax.set_title(
-    f"Ethanol isotropic fundamentals:\n134.99° $E_f = 32 \\text{{cm}}^{{-1}}$\n{width:~P} broadening"
+    "Ethanol isotropic fundamentals:\n134.99° $E_f = 32 "
+    f"\\text{{cm}}^{{-1}}$\n{width:~P} broadening"
 )
 ax.set_xlim(0, 200)
 ax.set_xlabel("Energy transfer / meV")
