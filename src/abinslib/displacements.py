@@ -1,0 +1,194 @@
+"""Functions for calculation of atomic displacement tensors
+
+The phonon mode displacements are described by 3x3 matrices related to the
+covariance matrices of atomic positions associated with each mode. In the
+CLIMAX/Abins notation this is 'B' and may include a Bose occupation factor.
+
+The sum over modes (include Brillouin Zone integration for periodic systems)
+with appropriate Bose occupation gives a physical distribution known in various
+forms as 'A', 'Atomic Displacement Parameters', 'U', ... and sometimes even
+'B'.
+
+In abins-lib these are referred to respectively as 'mode displacements' and
+'atomic displacements' where space permits, or 'B' and 'A' in compact notation,
+downcased to 'b' and 'a' in python variable names.
+
+The preferred data type for A is the DebyeWaller class from Euphonic.
+
+"""
+
+from __future__ import annotations
+from dataclasses import dataclass
+from functools import cached_property
+from typing import Self, TYPE_CHECKING
+
+from euphonic import Crystal, DebyeWaller, Quantity
+import numpy as np
+
+from .bose import BoseOccupation, calculate_bose_factor
+
+
+if TYPE_CHECKING:
+    from euphonic import QpointPhononModes
+
+
+@dataclass(frozen=True)
+class Displacements:
+    """Phonon mode displacement dataset
+
+    This represents atomic displacements as 3x3 tensors, often denoted U or B.
+    The data is arranged by qpoint, phonon mode and atom.
+
+    Note that while the "displacements" attribute represents the underlying
+    data of a Displacements object, the data should be accessed by the "one",
+    "n", "n_plus_one" and "two_n_plus_one" properties which provide
+    displacements at corresponding Bose occupation values.
+
+    Parameters
+    ----------
+    displacements:
+      Atomic displacement tensor Quantity with dimensions
+      (qpts, modes, atoms, 3, 3) and units length^2, without Bose occupation
+      factor. (i.e. with the same values as the "one" property on resulting
+      object.)
+    weights:
+      Normalised q-point weights corresponding to axis 0 of mode_displacements
+    bose_n:
+      Bose factors <n> corresponding to displacements at target temperature.
+      Other occupations <1>, <n+1> and <2n+1> will be derived from these
+      values.
+
+    """
+
+    displacements: Quantity
+    weights: np.ndarray
+    bose_n: np.ndarray
+    temperature: Quantity
+
+    def __post_init__(self):
+        """Make the underlying numpy array read-only so caching is safe"""
+        self.displacements.setflags(write=False)
+
+    @classmethod
+    def from_modes(
+        cls: Self,
+        modes: QpointPhononModes,
+        temperature: Quantity,
+        frequency_min: Quantity = Quantity(10, "cm_1"),
+    ) -> Self:
+        bose_factor = calculate_bose_factor(
+            modes.frequencies,
+            temperature,
+            occupation=BoseOccupation.N,
+        )
+
+        return cls(
+            displacements=_calculate_mode_displacements(
+                modes,
+                temperature,
+                frequency_min,
+            ),
+            weights=modes.weights,
+            bose_n=bose_factor,
+            temperature=temperature,
+        )
+
+    def one(self) -> Quantity:
+        return self.displacements
+
+    @cached_property
+    def n(self) -> Quantity:
+        return np.einsum("ij,ij...->ij...", self.bose_n, self.displacements)
+
+    @cached_property
+    def n_plus_one(self) -> Quantity:
+        return np.einsum("ij,ij...->ij...", self.bose_n + 1.0, self.displacements)
+
+    @cached_property
+    def two_n_plus_one(self) -> Quantity:
+        return np.einsum("ij,ij...->ij...", 2.0 * self.bose_n + 1.0, self.displacements)
+
+    def to_atomic_displacements(
+        self,
+        *,
+        crystal: Crystal | None = None,
+    ) -> DebyeWaller:
+        """Calculate atomic displacement tensor (A) for each atom
+
+        The return type is a Euphonic DebyeWaller object: "DebyeWaller" in
+        Euphonic terminology is identical to A in CLIMAX terminology.  In
+        Euphonic coherent scattering intensity calculations, the Debye—Waller
+        intensity factor appears as exp(-W_k) inside a square of sums.
+
+        In incoherent intensity calculations the Debye—Waller factor typically
+        appears as a pure factor exp(-2W_k).
+
+        In both cases W_k is the displacement tensor of an atom summed over all
+        phonon modes - i.e. "A".
+
+        Parameters
+        ----------
+        crystal
+          If provided, this is attached to output DebyeWaller data. Otherwise,
+          a dummy dataset is produced.
+
+        """
+        if crystal is None:
+            n_atoms = self.displacements.shape[2]
+            cell_vectors = Quantity(np.eye(3), "Å")
+            atom_r = np.zeros((n_atoms, 3))
+            atom_type = np.array([""] * n_atoms)
+            atom_mass = Quantity(np.zeros(n_atoms), "amu")
+            crystal = Crystal(cell_vectors, atom_r, atom_type, atom_mass)
+
+        dw = np.einsum(
+            "ijklm,i->klm",
+            self.two_n_plus_one.magnitude,
+            self.weights * 0.5,  # q-point symm weights, /2 scale convention for W
+        )
+
+        return DebyeWaller(
+            crystal, Quantity(dw, self.displacements.units), self.temperature
+        )
+
+
+def _calculate_mode_displacements(
+    modes: QpointPhononModes,
+    temperature: Quantity,
+    frequency_min: Quantity = Quantity(10, "cm_1"),
+) -> Quantity:
+    """Get the 3x3 displacement tensor (B) for each atom and phonon mode
+
+    Output array indices: (qpt, mode, atom, direction, direction)
+
+    Implementation is heavily based on the Euphonic
+    QpointPhononModes.calculate_debye_waller
+
+    """
+    # Cast frequencies to atomic units -> displacement results in Bohr
+    frequencies = modes.frequencies.to("hartree").magnitude
+
+    # For very small frequencies scale by zero instead of inv freq.
+    # (i.e. remove pure translation/rotation modes)
+    inv_frequency = np.divide(
+        1.0,
+        frequencies,
+        out=np.zeros_like(frequencies),
+        where=(frequencies > frequency_min.to("hartree").magnitude),
+    )
+
+    evec_tensors = np.real(
+        np.einsum("ijkl,ijkm->ijklm", modes.eigenvectors, np.conj(modes.eigenvectors))
+    )
+
+    mode_displacements = np.einsum(
+        "ij,k,ijklm->ijklm",
+        inv_frequency,
+        1 / (2 * modes.crystal.atom_mass.to("atomic_unit_of_mass").magnitude),
+        evec_tensors,
+    )
+
+    mode_displacements = Quantity(mode_displacements, "bohr**2").to(
+        modes.crystal.cell_vectors_unit + "**2"
+    )
+    return mode_displacements

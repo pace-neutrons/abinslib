@@ -15,8 +15,11 @@ class BoseOccupation(Enum):
     Typically we use 2N+1 in Debye-Waller factor (i.e. atomic displacements),
     N+1 for energy transfer to the sample and N for energy transfer from the
     sample.
+
+    ONE is simply 1: i.e. unscaled temperature-insensitive occupation
     """
 
+    ONE = auto()
     N = auto()
     N_PLUS_ONE = auto()
     TWO_N_PLUS_ONE = auto()
@@ -46,6 +49,8 @@ def calculate_bose_factor(
             return two_n_plus_one * 0.5 + 0.5
         case BoseOccupation.N:
             return two_n_plus_one * 0.5 - 0.5
+        case BoseOccupation.ONE:
+            return np.ones_like(two_n_plus_one)
         case other:
             raise TypeError(f"Not a valid occupation number: {other}")
 
@@ -55,9 +60,11 @@ def _zero_t_bose_factor(
 ) -> np.ndarray:
     """Get ideal occupation values if T=0, avoiding divide-by-zero"""
     match occupation:
-        case BoseOccupation.N:
-            return np.zeros_like(frequencies.magnitude)
         case BoseOccupation.N_PLUS_ONE | BoseOccupation.TWO_N_PLUS_ONE:
             return np.ones_like(frequencies.magnitude)
+        case BoseOccupation.ONE:
+            return np.ones_like(frequencies.magnitude)
+        case BoseOccupation.N:
+            return np.zeros_like(frequencies.magnitude)
         case _:
             raise TypeError("Invalid Bose occupation type")

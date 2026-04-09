@@ -27,6 +27,7 @@ def test_negative_temperature(frequencies):
 
 
 def test_relative_factors(frequencies, temperature):
+    one = calculate_bose_factor(frequencies, temperature, BoseOccupation.ONE)
     n = calculate_bose_factor(frequencies, temperature, BoseOccupation.N)
     n_plus_one = calculate_bose_factor(
         frequencies, temperature, BoseOccupation.N_PLUS_ONE
@@ -35,6 +36,7 @@ def test_relative_factors(frequencies, temperature):
         frequencies, temperature, BoseOccupation.TWO_N_PLUS_ONE
     )
 
+    assert_allclose(one, 1.0)
     assert_allclose(n_plus_one, n + 1.0)
     assert_allclose(two_n_plus_one, 2 * n + 1.0)
 
