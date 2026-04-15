@@ -5,5 +5,6 @@ channels:
   - conda-forge
 
 dependencies:
-  - mantid=6.15
+  - mantid~=6.15.0
   - matplotlib-base
+  - conda-forge::poco==1.14.2     # Might help with mamba resolution problems?

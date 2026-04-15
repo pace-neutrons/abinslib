@@ -7,6 +7,11 @@ on:
         description: "Target branch"
         required: true
         type: string
+      json:
+        description: "Include JSON in artifact"
+        required: true
+        type: boolean
+        default: false
       commit:
         description: "Add/commit generated plots to branch"
         require: true
@@ -24,18 +29,32 @@ jobs:
           fetch-tags: true
           fetch-depth: 0
 
-      - uses: snakemake/snakemake-github-action@v2
+      - uses: conda-incubator/setup-miniconda@v3
         with:
-          directory: "dev/validation"
-          snakefile: "workflow/Snakefile"
-          args: "-c 4 --sdm conda"
+          environment-file: dev/snakemake.yml
+          miniforge-version: latest
 
-      - uses: actions/upload-artifact@v7
+      - name: "Run snakemake"
+        shell: bash -l {0}
+        run: |
+          snakemake --directory dev/validation --snakefile dev/validation/workflow/Snakefile --sdm conda -c 4
+
+      - name: "Save plot as artifact"
+        if: ${{ ! inputs.json }}
+        uses: actions/upload-artifact@v7
         with:
           name: Validation results
-          path: dev/validation/results
+          path: 'dev/validation/results/*.png'
+
+      - name: "Save all results as artifact"
+        if: ${{ inputs.json }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: Validation results
+          path: 'dev/validation/results'
 
       - name: Commit updated plots
+        if: ${{ inputs.commit }}
         uses: EndBug/add-and-commit@v9
         with:
           add: 'dev/validation/results/*.png'
