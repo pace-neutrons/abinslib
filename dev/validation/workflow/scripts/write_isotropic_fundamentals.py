@@ -2,7 +2,6 @@ from euphonic import QpointPhononModes, Quantity, Spectrum1D
 import numpy as np
 from snakemake.script import snakemake
 
-from abinslib.bose import BoseOccupation
 from abinslib.displacements import Displacements
 from abinslib.isotropic_incoherent import q_scaling_isotropic_incoherent_spectra
 
@@ -23,8 +22,7 @@ q2 = calculate_indirect_q2(
     final_energy=Quantity(32.0, "cm_1").to("hartree"),
 )
 
-spectra = q_scaling_isotropic_incoherent_spectra(
-    modes, displacements, dw, q2, bins)
+spectra = q_scaling_isotropic_incoherent_spectra(modes, displacements, dw, q2, bins)
 spectrum = spectra.sum()
 
 spectrum.to_json_file(snakemake.output[0])
