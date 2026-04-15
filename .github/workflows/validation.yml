@@ -1,0 +1,42 @@
+name: Validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Target branch"
+        required: true
+        type: string
+      commit:
+        description: "Add/commit generated plots to branch"
+        require: true
+        type: boolean
+        default: false
+
+jobs:
+  snakemake:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-tags: true
+          fetch-depth: 0
+
+      - uses: snakemake/snakemake-github-action@v2
+        with:
+          directory: "dev/validation"
+          snakefile: "workflow/Snakefile"
+          args: "-c 4 --sdm conda"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Validation results
+          path: dev/validation/results
+
+      - name: Commit updated plots
+        uses: EndBug/add-and-commit@v9
+        with:
+          add: 'dev/validation/results/*.png'
+          message: 'Update validation plots'
