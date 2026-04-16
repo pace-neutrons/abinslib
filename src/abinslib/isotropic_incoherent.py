@@ -80,10 +80,10 @@ def calculate_isotropic_dw_factor(
 
 
 def _bin_mode_intensities(
-        modes: QpointPhononModes,
-        intensities: np.ndarray,
-        bins: Quantity,
-        apply_cross_section: bool = True,
+    modes: QpointPhononModes,
+    intensities: np.ndarray,
+    bins: Quantity,
+    apply_cross_section: bool = True,
 ) -> np.ndarray:
     """Bin intensities corresponding to QpointPhononModes to 1D spectra
 
@@ -153,7 +153,8 @@ def calculate_isotropic_incoherent_spectra(
         modes=modes,
         intensities=intensities,
         bins=bins,
-        apply_cross_section=apply_cross_section)
+        apply_cross_section=apply_cross_section,
+    )
 
     metadata = {
         "method": "isotropic incoherent",

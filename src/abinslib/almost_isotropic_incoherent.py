@@ -12,6 +12,7 @@ from .isotropic_incoherent import _bin_mode_intensities
 if TYPE_CHECKING:
     from euphonic import DebyeWaller, QpointPhononModes, Quantity
 
+
 def calculate_almost_isotropic_incoherent_fundamentals(
     mode_displacements: Displacements,
     atomic_displacements: DebyeWaller,
@@ -42,7 +43,8 @@ def calculate_almost_isotropic_incoherent_fundamentals(
     ba_trace = np.einsum(
         "ijklm, kml->ijk",
         mode_displacements.n_plus_one,
-        atomic_displacements.debye_waller)
+        atomic_displacements.debye_waller,
+    )
     inv_b_trace = np.divide(
         1.0,
         b_trace,
@@ -51,7 +53,9 @@ def calculate_almost_isotropic_incoherent_fundamentals(
     )
 
     exp_term = np.exp(
-        -nominal_q2[:, :, None] * (a_trace[None, None, :] + 2.0 * ba_trace * inv_b_trace) / 5.0
+        -nominal_q2[:, :, None]
+        * (a_trace[None, None, :] + 2.0 * ba_trace * inv_b_trace)
+        / 5.0
     )
     return q2_term * exp_term
 
@@ -78,11 +82,13 @@ def calculate_almost_isotropic_incoherent_spectra(
         atomic_displacements=atomic_displacements,
         nominal_q2=nominal_q2,
     )
+    # TODO look into scaling and return type of intensity functions
     y_data = _bin_mode_intensities(
         modes=modes,
-        intensities=intensities.magnitude,  # TODO look into scaling and return type of intensity functions
+        intensities=intensities.magnitude,
         bins=bins,
-        apply_cross_section=apply_cross_section)
+        apply_cross_section=apply_cross_section,
+    )
 
     metadata = {
         "method": "almost-isotropic incoherent approximation",
