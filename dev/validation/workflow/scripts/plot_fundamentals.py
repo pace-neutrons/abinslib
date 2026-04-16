@@ -10,15 +10,12 @@ mantid_data = Spectrum1D.from_json_file(snakemake.input[1]).broaden(width)
 
 fig, ax = plt.subplots()
 
-plot_1d_to_axis(abinslib_data, ax, label="q_scaling_isotropic_incoherent_spectra")
+plot_1d_to_axis(abinslib_data, ax, label=snakemake.params["label1"])
 plot_1d_to_axis(
-    mantid_data, ax, linestyle="--", label="Mantid-Abins isotropic fundamentals"
+    mantid_data, ax, linestyle="--", label=snakemake.params["label2"]
 )
 ax.legend()
-ax.set_title(
-    "Ethanol isotropic fundamentals:\n134.99° $E_f = 32 "
-    f"\\text{{cm}}^{{-1}}$\n{width:~P} broadening"
-)
+ax.set_title(snakemake.params["title"] + f"\n{width:~P} broadening")
 ax.set_xlim(0, 200)
 ax.set_xlabel("Energy transfer / meV")
 ax.set_ylabel("$S(\omega)$ / barn meV$^{-1}$")
