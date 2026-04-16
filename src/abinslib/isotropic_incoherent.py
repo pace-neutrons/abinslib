@@ -79,36 +79,18 @@ def calculate_isotropic_dw_factor(
     )
 
 
-def calculate_isotropic_incoherent_spectra(
-    modes: QpointPhononModes,
-    mode_displacements: Displacements,
-    atomic_displacements: DebyeWaller,
-    nominal_q2: Quantity,
-    bins: Quantity,
-    apply_cross_section: bool = True,
-    include_dw: bool = True,
-) -> Spectrum1DCollection:
-    """Calculate INS intensities in fully-isotropic incoherent approximation
+def _bin_mode_intensities(
+        modes: QpointPhononModes,
+        intensities: np.ndarray,
+        bins: Quantity,
+        apply_cross_section: bool = True,
+) -> np.ndarray:
+    """Bin intensities corresponding to QpointPhononModes to 1D spectra
 
-    Note that to give expected results, mode_displacements should have N+1 Bose
-    occupation and atomic_displacements should have 2N+1 occupation.
+    Sum over q-point and mode indices, using q-point weights from modes
 
-    Actual q-points of phonon modes will be disregarded; instead each mode
-    intensity will be based on a separate array of nominal Q^2 values
-    corresponding to modes. This is intended to approximate powder-averaging
-    with kinematic constraints: for indirect geometry the energy-Q^2
-    relationship can be determined using abinslib.utils.calculate_indirect_q2.
-
+    Output array has shape (atom_indices, bin_indices)
     """
-
-    intensities = calculate_isotropic_incoherent_fundamentals(
-        modes=modes,
-        mode_displacements=mode_displacements.n_plus_one,
-        atomic_displacements=atomic_displacements,
-        nominal_q2=nominal_q2,
-        include_dw=include_dw,
-    )
-
     bin_width = bins[1] - bins[0]
     q_weights = modes.weights / modes.weights.sum()
 
@@ -138,6 +120,40 @@ def calculate_isotropic_incoherent_spectra(
 
     # Apply correct spectral scaling / units
     y_data = y_data * ureg("barn") / bin_width
+    return y_data
+
+
+def calculate_isotropic_incoherent_spectra(
+    modes: QpointPhononModes,
+    mode_displacements: Displacements,
+    atomic_displacements: DebyeWaller,
+    nominal_q2: Quantity,
+    bins: Quantity,
+    apply_cross_section: bool = True,
+    include_dw: bool = True,
+) -> Spectrum1DCollection:
+    """Calculate INS intensities in fully-isotropic incoherent approximation
+
+    Actual q-points of phonon modes will be disregarded; instead each mode
+    intensity will be based on a separate array of nominal Q^2 values
+    corresponding to modes. This is intended to approximate powder-averaging
+    with kinematic constraints: for indirect geometry the energy-Q^2
+    relationship can be determined using abinslib.utils.calculate_indirect_q2.
+
+    """
+
+    intensities = calculate_isotropic_incoherent_fundamentals(
+        modes=modes,
+        mode_displacements=mode_displacements.n_plus_one,
+        atomic_displacements=atomic_displacements,
+        nominal_q2=nominal_q2,
+        include_dw=include_dw,
+    )
+    y_data = _bin_mode_intensities(
+        modes=modes,
+        intensities=intensities,
+        bins=bins,
+        apply_cross_section=apply_cross_section)
 
     metadata = {
         "method": "isotropic incoherent",

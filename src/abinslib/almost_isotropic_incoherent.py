@@ -1,11 +1,18 @@
 """Semi-analytic powder averaging approximations in CLIMAX/AbINS lineage"""
 
-from euphonic import DebyeWaller, Quantity
+from __future__ import annotations
+from typing import TYPE_CHECKING
+
+from euphonic.spectra import Spectrum1DCollection
 import numpy as np
 
 from .displacements import Displacements
+from .isotropic_incoherent import _bin_mode_intensities
 
-def calculate_isotropic_incoherent_fundamentals(
+if TYPE_CHECKING:
+    from euphonic import DebyeWaller, QpointPhononModes, Quantity
+
+def calculate_almost_isotropic_incoherent_fundamentals(
     mode_displacements: Displacements,
     atomic_displacements: DebyeWaller,
     nominal_q2: Quantity,
@@ -47,3 +54,42 @@ def calculate_isotropic_incoherent_fundamentals(
         -nominal_q2[:, :, None] * (a_trace[None, None, :] + 2.0 * ba_trace * inv_b_trace) / 5.0
     )
     return q2_term * exp_term
+
+
+def calculate_almost_isotropic_incoherent_spectra(
+    modes: QpointPhononModes,
+    mode_displacements: Displacements,
+    atomic_displacements: DebyeWaller,
+    nominal_q2: Quantity,
+    bins: Quantity,
+    apply_cross_section: bool = True,
+) -> Spectrum1DCollection:
+    """Calculate INS intensities in almost-isotropic incoherent approximation
+
+    Actual q-points of phonon modes will be disregarded; instead each mode
+    intensity will be based on a separate array of nominal Q^2 values
+    corresponding to modes. This is intended to approximate powder-averaging
+    with kinematic constraints: for indirect geometry the energy-Q^2
+    relationship can be determined using abinslib.utils.calculate_indirect_q2.
+
+    """
+    intensities = calculate_almost_isotropic_incoherent_fundamentals(
+        mode_displacements=mode_displacements,
+        atomic_displacements=atomic_displacements,
+        nominal_q2=nominal_q2,
+    )
+    y_data = _bin_mode_intensities(
+        modes=modes,
+        intensities=intensities.magnitude,  # TODO look into scaling and return type of intensity functions
+        bins=bins,
+        apply_cross_section=apply_cross_section)
+
+    metadata = {
+        "method": "almost-isotropic incoherent approximation",
+        "cross sections": ("incoherent + coherent" if apply_cross_section else "none"),
+        "line_data": [
+            {"atom_index": i, "atom_symbol": symbol, "quantum_order": 1}
+            for i, symbol in enumerate(modes.crystal.atom_type)
+        ],
+    }
+    return Spectrum1DCollection(x_data=bins, y_data=y_data, metadata=metadata)
