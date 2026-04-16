@@ -17,7 +17,7 @@ def calculate_almost_isotropic_incoherent_fundamentals(
     mode_displacements: Displacements,
     atomic_displacements: DebyeWaller,
     nominal_q2: Quantity,
-) -> Quantity:
+) -> np.ndarray:
     """Calculate fundamental mode intensities in almost-isotropic approximation
 
     S =  exp(-(Q^2 tr(A + 2 tr(A:B)/tr(B))/5)) Q^2 tr(B) / 3
@@ -38,12 +38,14 @@ def calculate_almost_isotropic_incoherent_fundamentals(
         / 3
     )
 
-    a_trace = np.einsum("...ii", atomic_displacements.debye_waller)
-    b_trace = np.einsum("...ii", mode_displacements.n_plus_one)
+    a_trace = np.einsum(
+        "...ii", atomic_displacements.debye_waller.to("bohr^2").magnitude
+    )
+    b_trace = np.einsum("...ii", mode_displacements.n_plus_one.to("bohr^2").magnitude)
     ba_trace = np.einsum(
         "ijklm, kml->ijk",
-        mode_displacements.n_plus_one,
-        atomic_displacements.debye_waller,
+        mode_displacements.n_plus_one.to("bohr^2").magnitude,
+        atomic_displacements.debye_waller.to("bohr^2").magnitude,
     )
     inv_b_trace = np.divide(
         1.0,
@@ -53,7 +55,7 @@ def calculate_almost_isotropic_incoherent_fundamentals(
     )
 
     exp_term = np.exp(
-        -nominal_q2[:, :, None]
+        -nominal_q2[:, :, None].to("bohr^-2").magnitude
         * (a_trace[None, None, :] + 2.0 * ba_trace * inv_b_trace)
         / 5.0
     )
@@ -82,10 +84,9 @@ def calculate_almost_isotropic_incoherent_spectra(
         atomic_displacements=atomic_displacements,
         nominal_q2=nominal_q2,
     )
-    # TODO look into scaling and return type of intensity functions
     y_data = _bin_mode_intensities(
         modes=modes,
-        intensities=intensities.magnitude,
+        intensities=intensities,
         bins=bins,
         apply_cross_section=apply_cross_section,
     )

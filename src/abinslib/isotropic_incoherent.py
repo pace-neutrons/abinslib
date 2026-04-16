@@ -36,7 +36,7 @@ def calculate_isotropic_incoherent_fundamentals(
     atomic_displacements: DebyeWaller,
     nominal_q2: Quantity,
     include_dw: bool = True,
-) -> Quantity:
+) -> np.ndarray:
     """Calculate mode intensities in fully-isotropic approximation
 
     S = exp(-(Q^2 tr(A)/3)) Q^2 tr(B) / 3
@@ -84,7 +84,7 @@ def _bin_mode_intensities(
     intensities: np.ndarray,
     bins: Quantity,
     apply_cross_section: bool = True,
-) -> np.ndarray:
+) -> Quantity:
     """Bin intensities corresponding to QpointPhononModes to 1D spectra
 
     Sum over q-point and mode indices, using q-point weights from modes
