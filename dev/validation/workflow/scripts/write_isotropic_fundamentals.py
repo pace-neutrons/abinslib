@@ -20,7 +20,7 @@ q2 = calculate_indirect_q2(
     mantid_data.get_bin_centres(),
     angle=(134.98885653282196 * np.pi / 180),
     final_energy=Quantity(32.0, "cm_1").to("hartree"),
-)
+) * 4
 
 spectra = q_scaling_isotropic_incoherent_spectra(modes, displacements, dw, q2, bins)
 spectrum = spectra.sum()
