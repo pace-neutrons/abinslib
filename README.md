@@ -23,8 +23,20 @@ pytest
 
 You may need to update Pip to access the `--group` feature.
 
+New code should be accompanied with appropriate tests; use
+
+`pytest --cov --cov-report term-missing`
+
+to get a breakdown of which lines are not covered by tests. (This can
+also be found in the Github Actions output when making a Pull Request.)
 As well as unit testing, code contributions must pass linting with
 `ruff check` and `ruff format`.
+
+The *pytest-regressions* package is used to create/test reference
+outputs for functions given particular input. This gives confidence
+that results do not change unexpectedly between versions, but such
+["regression tests"](https://en.wikipedia.org/wiki/Regression_testing)
+are not necessarily validated against an ideal or external reference.
 
 ## Validation status
 
