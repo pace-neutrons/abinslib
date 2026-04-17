@@ -45,3 +45,11 @@ def test_relative_factors(frequencies, temperature):
 def test_bad_occupation_type(frequencies, temperature, occupation):
     with pytest.raises(TypeError, match="Not a valid occupation number"):
         calculate_bose_factor(frequencies, temperature, occupation)
+
+
+def test_factors_regression(frequencies, temperature, num_regression):
+    """Check values from calculate_bose_factor have not changed"""
+    factor = calculate_bose_factor(
+        frequencies, temperature, occupation=BoseOccupation.N
+    )
+    num_regression.check({"bose_factor": factor})
