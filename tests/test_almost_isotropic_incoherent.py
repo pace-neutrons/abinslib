@@ -11,14 +11,17 @@ from abinslib.almost_isotropic_incoherent import (
 
 
 @pytest.mark.parametrize(("modes", "tosca_q2"), [("GaSb", "GaSb")], indirect=True)
-def test_calculate_almost_isotropic_incoherent_fundamentals(modes, tosca_q2):
+def test_calculate_almost_isotropic_incoherent_fundamentals(
+    modes, tosca_q2, ndarrays_regression
+):
     temperature = Quantity(100, "kelvin")
     b = Displacements.from_modes(modes, temperature=temperature)
     a = b.to_atomic_displacements()
 
-    _ = calculate_almost_isotropic_incoherent_fundamentals(
+    intensities = calculate_almost_isotropic_incoherent_fundamentals(
         mode_displacements=b, atomic_displacements=a, nominal_q2=tosca_q2
     )
+    ndarrays_regression.check({"intensities": intensities})
 
 
 @pytest.mark.parametrize(
@@ -31,7 +34,9 @@ def test_calculate_almost_isotropic_incoherent_fundamentals(modes, tosca_q2):
     ],
     indirect=["modes", "tosca_q2"],
 )
-def test_calculate_isotropic_incoherent_spectrum(temperature_k, modes, tosca_q2):
+def test_calculate_isotropic_incoherent_spectrum(
+    temperature_k, modes, tosca_q2, ndarrays_regression
+):
     """Test almost-isotropic fundamentals"""
 
     temperature = Quantity(temperature_k, "K")
@@ -40,4 +45,13 @@ def test_calculate_isotropic_incoherent_spectrum(temperature_k, modes, tosca_q2)
     b = Displacements.from_modes(modes=modes, temperature=temperature)
     a = b.to_atomic_displacements(crystal=modes.crystal)
 
-    _ = calculate_almost_isotropic_incoherent_spectra(modes, b, a, tosca_q2, bins)
+    spectra = calculate_almost_isotropic_incoherent_spectra(modes, b, a, tosca_q2, bins)
+
+    ndarrays_regression.check(
+        {
+            "x_data": spectra.x_data.magnitude,
+            "y_data": spectra.y_data.magnitude,
+            "x_data_unit": spectra.x_data_unit,
+            "y_data_unit": spectra.y_data_unit,
+        }
+    )
