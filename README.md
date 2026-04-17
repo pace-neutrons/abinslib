@@ -33,7 +33,8 @@ Mantid-Abins: a 1D fundamental spectrum in the fully-isotropic
 approximation. This is benchmarked against the equivalent calculation
 in Mantid by a Snakemake workflow in *dev/validation*:
 
-![](dev/validation/results/plot.png)
+![](dev/validation/results/isotropic-plot.png)
+![](dev/validation/results/almost-isotropic-plot.png)
 
 To reproduce the result so closely it was necessary to apply similar
 implementation details: the `q_scaling_isotropic_incoherent_spectra`

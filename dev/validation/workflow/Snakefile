@@ -3,15 +3,37 @@ configfile: "config/config.yml"
 
 rule all:
     input:
-        expand("results/plot.png"),
-
+        "results/isotropic-plot.png",
+        "results/almost-isotropic-plot.png",
 
 rule validate_isotropic_fundamentals_like_mantid:
     input:
         "results/ethanol_mantid_isotropic_fundamentals.json",
         "results/ethanol_isotropic_fundamentals.json",
     output:
-        "results/plot.png",
+        "results/isotropic-plot.png",
+    params:
+        title=(lambda w: ("Ethanol isotropic fundamentals:\n"
+                          r"134.99° $E_f = 32 \text{cm}^{-1}$")),
+        label1="q_scaling_isotropic_incoherent_spectra",
+        label2="Mantid-Abins isotropic fundamentals",
+    conda:
+        "envs/mantid.yml"
+    script:
+        "scripts/plot_fundamentals.py"
+
+
+rule validate_almost_isotropic_fundamentals_like_mantid:
+    input:
+        "results/ethanol_mantid_almost_isotropic_fundamentals.json",
+        "results/ethanol_almost_isotropic_fundamentals.json",
+    output:
+        "results/almost-isotropic-plot.png",
+    params:
+        title=(lambda w: ("Ethanol almost-isotropic fundamentals:\n"
+                          r"134.99° $E_f = 32 \text{cm}^{-1}$")),
+        label1="calculate_almost_isotropic_incoherent_spectra",
+        label2="Mantid-Abins almost-isotropic fundamentals",
     conda:
         "envs/mantid.yml"
     script:
@@ -33,6 +55,21 @@ rule write_isotropic_fundamentals_mantid:
         "scripts/write_mantid_fundamentals.py"
 
 
+rule write_almost_isotropic_fundamentals_mantid:
+    input:
+        "data/{label}_qpoint_phonon_modes.json",
+    output:
+        "results/{label}_mantid_almost_isotropic_fundamentals.json",
+    conda:
+        "envs/mantid.yml"
+    params:
+        raw=True,
+        isotropic=False,
+        abins_kwargs=config["abins_kwargs"],
+    script:
+        "scripts/write_mantid_fundamentals.py"
+
+
 rule write_isotropic_fundamentals:
     input:
         "data/{label}_qpoint_phonon_modes.json",
@@ -43,3 +80,16 @@ rule write_isotropic_fundamentals:
         "envs/abins-lib.yml"
     script:
         "scripts/write_isotropic_fundamentals.py"
+
+
+
+rule write_almost_isotropic_fundamentals:
+    input:
+        "data/{label}_qpoint_phonon_modes.json",
+        "results/{label}_mantid_almost_isotropic_fundamentals.json",
+    output:
+        "results/{label}_almost_isotropic_fundamentals.json",
+    conda:
+        "envs/abins-lib.yml"
+    script:
+        "scripts/write_almost_isotropic_fundamentals.py"
