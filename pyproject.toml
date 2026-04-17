@@ -43,6 +43,7 @@ select = [
        "E",
        "UP",
        "COM",     # flake8-commas
+       "PT",      # flake8-pytest-style
 ]
 ignore = [
        "COM812",

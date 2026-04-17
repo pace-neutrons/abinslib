@@ -69,7 +69,7 @@ def test_isotropic_dw(ref_modes):
 
 
 @pytest.mark.parametrize(
-    "temperature_k,system", product([10, 100], ["GaSb", "ethanol"])
+    ("temperature_k", "system"), product([10, 100], ["GaSb", "ethanol"])
 )
 def test_calculate_isotropic_incoherent_spectrum(
     temperature_k, ref_modes, system, patch_cross_sections
@@ -106,7 +106,7 @@ def test_calculate_isotropic_incoherent_spectrum(
 
 
 @pytest.mark.parametrize(
-    "temperature_k,system", product([10, 100], ["GaSb", "ethanol"])
+    ("temperature_k", "system"), product([10, 100], ["GaSb", "ethanol"])
 )
 def test_q_scaling_isotropic_incoherent_spectrum(
     temperature_k, ref_modes, system, patch_cross_sections

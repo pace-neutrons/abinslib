@@ -45,7 +45,7 @@ def test_calculate_almost_isotropic_incoherent_fundamentals(ref_modes):
 
 
 @pytest.mark.parametrize(
-    "temperature_k,system", product([10, 100], ["GaSb", "ethanol"])
+    ("temperature_k", "system"), product([10, 100], ["GaSb", "ethanol"])
 )
 def test_calculate_isotropic_incoherent_spectrum(
     temperature_k,

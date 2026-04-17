@@ -7,7 +7,7 @@ from abinslib.util import calculate_indirect_q2
 
 
 @pytest.mark.parametrize(
-    "energy_transfer,angle,final_energy,expected_q",
+    ("energy_transfer", "angle", "final_energy", "expected_q"),
     [
         (
             Quantity([11.496160804020064, 984.8698391959799], "meV"),
