@@ -17,6 +17,7 @@ ax.set_title(snakemake.params["title"] + f"\n{width:~P} broadening")
 ax.set_xlim(0, 200)
 ax.set_xlabel("Energy transfer / meV")
 ax.set_ylabel("$S(\omega)$ / barn meV$^{-1}$")
+ax.set_yscale("log")
 
 fig.tight_layout()
 fig.savefig(snakemake.output[0])

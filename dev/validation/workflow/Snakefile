@@ -26,13 +26,13 @@ rule validate_isotropic_fundamentals_like_mantid:
 rule validate_almost_isotropic_fundamentals_like_mantid:
     input:
         "results/ethanol_mantid_almost_isotropic_fundamentals.json",
-        "results/ethanol_isotropic_fundamentals.json",
+        "results/ethanol_almost_isotropic_fundamentals.json",
     output:
         "results/almost-isotropic-plot.png",
     params:
         title=(lambda w: ("Ethanol almost-isotropic fundamentals:\n"
                           r"134.99° $E_f = 32 \text{cm}^{-1}$")),
-        label1="q_scaling_isotropic_incoherent_spectra",
+        label1="calculate_almost_isotropic_incoherent_spectra",
         label2="Mantid-Abins almost-isotropic fundamentals",
     conda:
         "envs/mantid.yml"
@@ -80,3 +80,16 @@ rule write_isotropic_fundamentals:
         "envs/abins-lib.yml"
     script:
         "scripts/write_isotropic_fundamentals.py"
+
+
+
+rule write_almost_isotropic_fundamentals:
+    input:
+        "data/{label}_qpoint_phonon_modes.json",
+        "results/{label}_mantid_almost_isotropic_fundamentals.json",
+    output:
+        "results/{label}_almost_isotropic_fundamentals.json",
+    conda:
+        "envs/abins-lib.yml"
+    script:
+        "scripts/write_almost_isotropic_fundamentals.py"
