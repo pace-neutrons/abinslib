@@ -66,5 +66,5 @@ def _zero_t_bose_factor(
             return np.ones_like(frequencies.magnitude)
         case BoseOccupation.N:
             return np.zeros_like(frequencies.magnitude)
-        case _:
-            raise TypeError("Invalid Bose occupation type")
+        case other:
+            raise TypeError(f"Not a valid occupation number: {other}")

@@ -57,6 +57,7 @@ def test_zero_t_factors(frequencies, occupation, expected):
     )
 
 
+@pytest.mark.parametrize("temperature", [Quantity(10, "K"), Quantity(0, "K")])
 @pytest.mark.parametrize("occupation", [1, "N", None, True])
 def test_bad_occupation_type(frequencies, temperature, occupation):
     with pytest.raises(TypeError, match="Not a valid occupation number"):
