@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from euphonic import QpointPhononModes
+from euphonic import QpointPhononModes, Quantity
 import numpy as np
 import pytest
 
@@ -20,3 +20,10 @@ def modes(request):
 def ref_npz(request):
     """Reference data dict from npz file"""
     return np.load(test_data / request.param)
+
+
+@pytest.fixture(scope="session")
+def tosca_q2(request):
+    """Nominal Q2 values corresponding to a 'modes' for Mantid-like TOSCA"""
+    q2 = np.load(test_data / f"{request.param}_modes_q2.npy")
+    return Quantity(q2, "angstrom^-2")

@@ -1,4 +1,3 @@
-from itertools import product
 from pathlib import Path
 
 from euphonic import Crystal, QpointPhononModes, Quantity
@@ -19,17 +18,6 @@ from abinslib.isotropic_incoherent import (
 
 
 test_data = Path(__file__).parent / "data"
-
-
-@pytest.fixture(scope="module")
-def ref_modes() -> dict[str, QpointPhononModes]:
-    """Precalculated phonon modes, by name"""
-    return {
-        name: QpointPhononModes.from_json_file(
-            str(test_data / f"{name}_qpoint_phonon_modes.json")
-        )
-        for name in ["GaSb", "ethanol"]
-    }
 
 
 @pytest.fixture
@@ -54,48 +42,50 @@ def patch_cross_sections(monkeypatch):
     )
 
 
-def test_isotropic_dw(ref_modes):
+@pytest.mark.parametrize(
+    ("modes", "ref_npz"), [("GaSb", "GaSb_abins_isotropic_dw.npz")], indirect=True
+)
+def test_isotropic_dw(modes, ref_npz):
     """Check isotropic DW on Q2 mesh agrees with Mantid-Abins"""
-    gasb_modes = ref_modes["GaSb"]
-    dw_data = np.load(test_data / "GaSb_abins_isotropic_dw.npz")
-    q2 = Quantity(dw_data["q2"], "angstrom^-2")
+    q2 = Quantity(ref_npz["q2"], "angstrom^-2")
 
     a = Displacements.from_modes(
-        gasb_modes, temperature=Quantity(100, "kelvin")
+        modes, temperature=Quantity(100, "kelvin")
     ).to_atomic_displacements()
 
     binned_dw_factor = calculate_isotropic_dw_factor(a, q2[None, :])
-    assert_allclose(binned_dw_factor[0], dw_data["iso_dw"].transpose(), rtol=1e-6)
+    assert_allclose(binned_dw_factor[0], ref_npz["iso_dw"].transpose(), rtol=1e-6)
 
 
 @pytest.mark.parametrize(
-    ("temperature_k", "system"), product([10, 100], ["GaSb", "ethanol"])
+    ("temperature_k", "modes", "ref_npz", "tosca_q2"),
+    [
+        (10, "GaSb", "GaSb_abins_10k_isotropic_raw.npz", "GaSb"),
+        (100, "GaSb", "GaSb_abins_100k_isotropic_raw.npz", "GaSb"),
+        (10, "ethanol", "ethanol_abins_10k_isotropic_raw.npz", "ethanol"),
+        (100, "ethanol", "ethanol_abins_100k_isotropic_raw.npz", "ethanol"),
+    ],
+    indirect=("modes", "ref_npz", "tosca_q2"),
 )
 def test_calculate_isotropic_incoherent_spectrum(
-    temperature_k, ref_modes, system, patch_cross_sections
+    temperature_k, modes, ref_npz, tosca_q2, patch_cross_sections
 ):
     """Test reference method for fully-isotropic calculation
 
     Note that there is some difference from Mantid-Abins reference because that
     implementation applies DW and Q2 scaling after initial energy binning
     """
-    modes = ref_modes[system]
-
     temperature = Quantity(temperature_k, "K")
-    ref_data = np.load(test_data / f"{system}_abins_{temperature_k}k_isotropic_raw.npz")
 
-    bins = Quantity(ref_data["energy"], str(ref_data["energy_unit"]))
+    bins = Quantity(ref_npz["energy"], str(ref_npz["energy_unit"]))
     bin_width = bins[1] - bins[0]
 
-    ref_intensity = ref_data["intensity"]
+    ref_intensity = ref_npz["intensity"]
 
     b = Displacements.from_modes(modes=modes, temperature=temperature)
     a = b.to_atomic_displacements(crystal=modes.crystal)
 
-    # Q2 calculated at exact Mantid-Abins TOSCA backscattering angle
-    q2 = Quantity(np.load(test_data / f"{system}_modes_q2.npy"), "angstrom^-2")
-
-    spectra = calculate_isotropic_incoherent_spectra(modes, b, a, q2, bins)
+    spectra = calculate_isotropic_incoherent_spectra(modes, b, a, tosca_q2, bins)
     spectrum = spectra.sum()
 
     assert_allclose(
@@ -106,10 +96,17 @@ def test_calculate_isotropic_incoherent_spectrum(
 
 
 @pytest.mark.parametrize(
-    ("temperature_k", "system"), product([10, 100], ["GaSb", "ethanol"])
+    ("temperature_k", "modes", "ref_npz"),
+    [
+        (10, "GaSb", "GaSb_abins_10k_isotropic_raw.npz"),
+        (100, "GaSb", "GaSb_abins_100k_isotropic_raw.npz"),
+        (10, "ethanol", "ethanol_abins_10k_isotropic_raw.npz"),
+        (100, "ethanol", "ethanol_abins_100k_isotropic_raw.npz"),
+    ],
+    indirect=("modes", "ref_npz"),
 )
 def test_q_scaling_isotropic_incoherent_spectrum(
-    temperature_k, ref_modes, system, patch_cross_sections
+    temperature_k, modes, ref_npz, patch_cross_sections
 ):
     """Validate fully-isotropic calculation against Mantid-Abins data
 
@@ -119,15 +116,12 @@ def test_q_scaling_isotropic_incoherent_spectrum(
     calculation, if still larger than expected
     """
 
-    modes = ref_modes[system]
-
     temperature = Quantity(temperature_k, "K")
-    ref_data = np.load(test_data / f"{system}_abins_{temperature_k}k_isotropic_raw.npz")
 
-    bins = Quantity(ref_data["energy"], str(ref_data["energy_unit"]))
+    bins = Quantity(ref_npz["energy"], str(ref_npz["energy_unit"]))
     bin_width = bins[1] - bins[0]
 
-    ref_intensity = ref_data["intensity"]
+    ref_intensity = ref_npz["intensity"]
 
     b = Displacements.from_modes(modes=modes, temperature=temperature)
     a = b.to_atomic_displacements()

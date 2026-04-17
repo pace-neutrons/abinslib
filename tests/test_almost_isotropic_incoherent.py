@@ -8,32 +8,30 @@ from abinslib.almost_isotropic_incoherent import (
     calculate_almost_isotropic_incoherent_fundamentals,
     calculate_almost_isotropic_incoherent_spectra,
 )
-from abinslib.util import calculate_indirect_q2
 
 
-@pytest.mark.parametrize("modes", ["GaSb"], indirect=True)
-def test_calculate_almost_isotropic_incoherent_fundamentals(modes):
+@pytest.mark.parametrize(("modes", "tosca_q2"), [("GaSb", "GaSb")], indirect=True)
+def test_calculate_almost_isotropic_incoherent_fundamentals(modes, tosca_q2):
     temperature = Quantity(100, "kelvin")
     b = Displacements.from_modes(modes, temperature=temperature)
     a = b.to_atomic_displacements()
 
-    q2 = calculate_indirect_q2(
-        modes.frequencies,
-        angle=(134.98885653282196 * np.pi / 180),
-        final_energy=Quantity(32.0, "cm_1").to("hartree"),
-    )
-
     _ = calculate_almost_isotropic_incoherent_fundamentals(
-        mode_displacements=b, atomic_displacements=a, nominal_q2=q2
+        mode_displacements=b, atomic_displacements=a, nominal_q2=tosca_q2
     )
 
 
 @pytest.mark.parametrize(
-    ("temperature_k", "modes"),
-    [(10, "GaSb"), (100, "GaSb"), (10, "ethanol"), (100, "ethanol")],
-    indirect=["modes"],
+    ("temperature_k", "modes", "tosca_q2"),
+    [
+        (10, "GaSb", "GaSb"),
+        (100, "GaSb", "GaSb"),
+        (10, "ethanol", "ethanol"),
+        (100, "ethanol", "ethanol"),
+    ],
+    indirect=["modes", "tosca_q2"],
 )
-def test_calculate_isotropic_incoherent_spectrum(temperature_k, modes):
+def test_calculate_isotropic_incoherent_spectrum(temperature_k, modes, tosca_q2):
     """Test almost-isotropic fundamentals"""
 
     temperature = Quantity(temperature_k, "K")
@@ -42,10 +40,4 @@ def test_calculate_isotropic_incoherent_spectrum(temperature_k, modes):
     b = Displacements.from_modes(modes=modes, temperature=temperature)
     a = b.to_atomic_displacements(crystal=modes.crystal)
 
-    q2 = calculate_indirect_q2(
-        modes.frequencies,
-        angle=(134.98885653282196 * np.pi / 180),
-        final_energy=Quantity(32.0, "cm_1").to("hartree"),
-    )
-
-    _ = calculate_almost_isotropic_incoherent_spectra(modes, b, a, q2, bins)
+    _ = calculate_almost_isotropic_incoherent_spectra(modes, b, a, tosca_q2, bins)
