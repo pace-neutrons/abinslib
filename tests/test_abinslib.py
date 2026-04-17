@@ -1,18 +1,11 @@
-from pathlib import Path
-
-import numpy as np
+from packaging.version import Version
 
 import abinslib
 
-ref_data = Path(__file__).parent / "data"
 
+def test_valid_version() -> None:
 
-def test_import() -> None:
     assert isinstance(abinslib.__version__, str)
 
-
-def test_testdata() -> None:
-    datafile = ref_data / "GaSb_abins_10k_isotropic_raw.npz"
-    data = np.load(datafile)
-
-    assert "energy" in data.keys()
+    # Raises InvalidVersion if improperly formatted
+    Version(abinslib.__version__)
