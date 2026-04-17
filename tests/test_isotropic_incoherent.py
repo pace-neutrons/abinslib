@@ -108,6 +108,32 @@ def test_calculate_isotropic_incoherent_spectrum(
     )
 
 
+@pytest.mark.parametrize(("modes", "tosca_q2"), [("GaSb", "GaSb")], indirect=True)
+def test_calculate_isotropic_incoherent_spectrum_no_cross_section(
+    modes, tosca_q2, ndarrays_regression
+):
+    """Regression test for isotropic spectrum binning without cross sections"""
+    temperature = Quantity(100.0, "K")
+
+    bins = Quantity(np.linspace(0, 1000, 400), "cm_1")
+    bins[1] - bins[0]
+
+    b = Displacements.from_modes(modes=modes, temperature=temperature)
+    a = b.to_atomic_displacements(crystal=modes.crystal)
+
+    spectra = calculate_isotropic_incoherent_spectra(
+        modes, b, a, tosca_q2, bins, apply_cross_section=False, include_dw=True
+    )
+    spectrum = spectra.sum()
+
+    ndarrays_regression.check(
+        {
+            "y_data": spectrum.y_data.to("barn / cm_1").magnitude,
+            "x_data": spectrum.x_data.to("cm_1").magnitude,
+        }
+    )
+
+
 @pytest.mark.parametrize(
     ("temperature_k", "modes", "ref_npz"),
     [
