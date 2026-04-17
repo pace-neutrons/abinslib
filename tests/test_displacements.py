@@ -1,5 +1,7 @@
 """Unit tests for abinslib.displacements module"""
 
+from itertools import product
+
 from euphonic import Quantity
 import numpy as np
 from numpy.testing import assert_allclose
@@ -48,6 +50,16 @@ def test_calculate_adp(modes, abins_average_a_traces):
         np.array(abins_average_a_traces) / 2,
         atol=1e-8,
     )
+
+
+@pytest.mark.parametrize(
+    ("modes", "temperature_k"), product(["GaSb"], [0, 100]), indirect=("modes",)
+)
+def test_dw_regression(modes, temperature_k, ndarrays_regression):
+    dw = Displacements.from_modes(
+        modes, temperature=Quantity(temperature_k, "K")
+    ).to_atomic_displacements()
+    ndarrays_regression.check({"dw": dw.debye_waller.to("angstrom^2").magnitude})
 
 
 @pytest.mark.parametrize(

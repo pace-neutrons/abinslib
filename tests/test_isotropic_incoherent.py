@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from euphonic import Crystal, QpointPhononModes, Quantity
+from euphonic import Crystal, Quantity
 import numpy as np
 from numpy.testing import assert_allclose
 import pytest
@@ -45,7 +45,7 @@ def patch_cross_sections(monkeypatch):
 @pytest.mark.parametrize(
     ("modes", "ref_npz"), [("GaSb", "GaSb_abins_isotropic_dw.npz")], indirect=True
 )
-def test_isotropic_dw(modes, ref_npz):
+def test_isotropic_dw(modes, ref_npz, ndarrays_regression):
     """Check isotropic DW on Q2 mesh agrees with Mantid-Abins"""
     q2 = Quantity(ref_npz["q2"], "angstrom^-2")
 
@@ -53,8 +53,12 @@ def test_isotropic_dw(modes, ref_npz):
         modes, temperature=Quantity(100, "kelvin")
     ).to_atomic_displacements()
 
+    # Fairly tight comparison with Mantid-Abins ref
     binned_dw_factor = calculate_isotropic_dw_factor(a, q2[None, :])
     assert_allclose(binned_dw_factor[0], ref_npz["iso_dw"].transpose(), rtol=1e-6)
+
+    # Very tight comparison with regression data
+    ndarrays_regression.check({"dw_factor": binned_dw_factor})
 
 
 @pytest.mark.parametrize(
@@ -68,7 +72,7 @@ def test_isotropic_dw(modes, ref_npz):
     indirect=("modes", "ref_npz", "tosca_q2"),
 )
 def test_calculate_isotropic_incoherent_spectrum(
-    temperature_k, modes, ref_npz, tosca_q2, patch_cross_sections
+    temperature_k, modes, ref_npz, tosca_q2, patch_cross_sections, ndarrays_regression
 ):
     """Test reference method for fully-isotropic calculation
 
@@ -88,10 +92,19 @@ def test_calculate_isotropic_incoherent_spectrum(
     spectra = calculate_isotropic_incoherent_spectra(modes, b, a, tosca_q2, bins)
     spectrum = spectra.sum()
 
+    # Loose check against Mantid-Abins: different quantisation scheme
     assert_allclose(
         spectrum.y_data.magnitude,
         ref_intensity[0] / bin_width.magnitude,
         rtol=1e-2,
+    )
+
+    # Exact check against regression data
+    ndarrays_regression.check(
+        {
+            "y_data": spectrum.y_data.to("barn / meV").magnitude,
+            "x_data": spectrum.x_data.to("meV").magnitude,
+        }
     )
 
 
@@ -106,7 +119,11 @@ def test_calculate_isotropic_incoherent_spectrum(
     indirect=("modes", "ref_npz"),
 )
 def test_q_scaling_isotropic_incoherent_spectrum(
-    temperature_k, modes, ref_npz, patch_cross_sections
+    temperature_k,
+    modes,
+    ref_npz,
+    patch_cross_sections,
+    ndarrays_regression,
 ):
     """Validate fully-isotropic calculation against Mantid-Abins data
 
@@ -130,8 +147,12 @@ def test_q_scaling_isotropic_incoherent_spectrum(
     spectra = q_scaling_isotropic_incoherent_spectra(modes, b, a, q2, bins)
     spectrum = spectra.sum()
 
+    # Fairly tight check against Mantid-Abins reference
     assert_allclose(
         spectrum.y_data.magnitude,
         ref_intensity[0] / bin_width.magnitude,
         rtol=1e-8,
     )
+
+    # Very tight check against regression data
+    ndarrays_regression.check({"y_data": spectrum.y_data.magnitude})
