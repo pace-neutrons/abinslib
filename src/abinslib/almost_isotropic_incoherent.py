@@ -38,15 +38,11 @@ def calculate_almost_isotropic_incoherent_fundamentals(
         / 3
     )
 
-    a_trace = np.einsum(
-        "...ii", atomic_displacements.debye_waller.to("bohr^2").magnitude
-    )
-    b_trace = np.einsum("...ii", mode_displacements.n_plus_one.to("bohr^2").magnitude)
-    ba_trace = np.einsum(
-        "ijklm, kml->ijk",
-        mode_displacements.n_plus_one.to("bohr^2").magnitude,
-        atomic_displacements.debye_waller.to("bohr^2").magnitude,
-    )
+    a = atomic_displacements.debye_waller.to("bohr^2").magnitude * 2
+    b = mode_displacements.n_plus_one.to("bohr^2").magnitude
+    a_trace = np.einsum("...ii", a)
+    b_trace = np.einsum("...ii", b)
+    ba_trace = np.einsum("ijklm, kml->ijk", b, a)
     inv_b_trace = np.divide(
         1.0,
         b_trace,
