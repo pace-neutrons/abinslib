@@ -1,6 +1,10 @@
+# Mac garbage
+.DS_Store
+
 # Snakemake resources and results
 .snakemake/
 dev/phonon_data/results/*
+dev/validation/results/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
