@@ -10,6 +10,27 @@ import pytest
 from abinslib.displacements import Displacements
 
 
+def test_displacements():
+    """Self-consistency check of displacements properties"""
+
+    rng = np.random.default_rng(seed=1)
+
+    displacements = Displacements(
+        displacements=rng.random((2, 4, 5, 3, 3)),
+        weights=np.array((0.2, 0.8)),
+        bose_n=rng.random((2, 4)),
+        temperature=Quantity(10, "K"),
+    )
+
+    assert_allclose(
+        (displacements.n / displacements.one)[:, :, 0, 0, 0], displacements.bose_n
+    )
+
+    assert_allclose(
+        displacements.two_n_plus_one - displacements.one, displacements.n * 2.0
+    )
+
+
 @pytest.mark.parametrize(
     ("modes", "abins_average_a_traces"),
     [("GaSb", (0.01321831, 0.01127088))],

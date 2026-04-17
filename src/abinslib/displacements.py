@@ -93,6 +93,7 @@ class Displacements:
             temperature=temperature,
         )
 
+    @cached_property
     def one(self) -> Quantity:
         return self.displacements
 
