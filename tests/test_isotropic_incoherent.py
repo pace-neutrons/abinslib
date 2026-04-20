@@ -116,7 +116,6 @@ def test_calculate_isotropic_incoherent_spectrum_no_cross_section(
     temperature = Quantity(100.0, "K")
 
     bins = Quantity(np.linspace(0, 1000, 400), "cm_1")
-    bins[1] - bins[0]
 
     b = Displacements.from_modes(modes=modes, temperature=temperature)
     a = b.to_atomic_displacements(crystal=modes.crystal)
