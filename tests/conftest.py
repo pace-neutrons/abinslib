@@ -9,6 +9,28 @@ import pytest
 test_data = Path(__file__).parent / "data"
 
 
+def _regression_data(request) -> Path:
+    """Get a regression test data directory for the current module
+
+    e.g. "regression_data/test_isotropic_incoherent"
+
+    Strip the leading "test." but allow further nesting.
+
+    """
+    name = ".".join(request.module.__name__.split(".")[1:])
+    return Path(__file__).parent / f"regression_data/{name}"
+
+
+@pytest.fixture(scope="module")
+def lazy_datadir(request) -> Path:
+    return _regression_data(request)
+
+
+@pytest.fixture(scope="module")
+def original_datadir(request) -> Path:
+    return _regression_data(request)
+
+
 class ToscaModes(NamedTuple):
     modes: QpointPhononModes
     q2: Quantity
