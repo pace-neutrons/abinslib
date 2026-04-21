@@ -62,17 +62,17 @@ def test_isotropic_dw(modes, ref_npz, ndarrays_regression):
 
 
 @pytest.mark.parametrize(
-    ("temperature_k", "modes", "ref_npz", "tosca_q2"),
+    ("temperature_k", "tosca_modes", "ref_npz"),
     [
-        (10, "GaSb", "GaSb_abins_10k_isotropic_raw.npz", "GaSb"),
-        (100, "GaSb", "GaSb_abins_100k_isotropic_raw.npz", "GaSb"),
-        (10, "ethanol", "ethanol_abins_10k_isotropic_raw.npz", "ethanol"),
-        (100, "ethanol", "ethanol_abins_100k_isotropic_raw.npz", "ethanol"),
+        (10, "GaSb", "GaSb_abins_10k_isotropic_raw.npz"),
+        (100, "GaSb", "GaSb_abins_100k_isotropic_raw.npz"),
+        (10, "ethanol", "ethanol_abins_10k_isotropic_raw.npz"),
+        (100, "ethanol", "ethanol_abins_100k_isotropic_raw.npz"),
     ],
-    indirect=("modes", "ref_npz", "tosca_q2"),
+    indirect=("tosca_modes", "ref_npz"),
 )
 def test_calculate_isotropic_incoherent_spectrum(
-    temperature_k, modes, ref_npz, tosca_q2, patch_cross_sections, ndarrays_regression
+    temperature_k, tosca_modes, ref_npz, patch_cross_sections, ndarrays_regression
 ):
     """Test reference method for fully-isotropic calculation
 
@@ -80,6 +80,7 @@ def test_calculate_isotropic_incoherent_spectrum(
     implementation applies DW and Q2 scaling after initial energy binning
     """
     temperature = Quantity(temperature_k, "K")
+    modes, q2 = tosca_modes
 
     bins = Quantity(ref_npz["energy"], str(ref_npz["energy_unit"]))
     bin_width = bins[1] - bins[0]
@@ -89,7 +90,7 @@ def test_calculate_isotropic_incoherent_spectrum(
     b = Displacements.from_modes(modes=modes, temperature=temperature)
     a = b.to_atomic_displacements(crystal=modes.crystal)
 
-    spectra = calculate_isotropic_incoherent_spectra(modes, b, a, tosca_q2, bins)
+    spectra = calculate_isotropic_incoherent_spectra(modes, b, a, q2, bins)
     spectrum = spectra.sum()
 
     # Loose check against Mantid-Abins: different quantisation scheme
@@ -108,12 +109,13 @@ def test_calculate_isotropic_incoherent_spectrum(
     )
 
 
-@pytest.mark.parametrize(("modes", "tosca_q2"), [("GaSb", "GaSb")], indirect=True)
+@pytest.mark.parametrize("tosca_modes", ["GaSb"], indirect=True)
 def test_calculate_isotropic_incoherent_spectrum_no_cross_section(
-    modes, tosca_q2, ndarrays_regression
+    tosca_modes, ndarrays_regression
 ):
     """Regression test for isotropic spectrum binning without cross sections"""
     temperature = Quantity(100.0, "K")
+    modes, q2 = tosca_modes
 
     bins = Quantity(np.linspace(0, 1000, 400), "cm_1")
 
@@ -121,7 +123,7 @@ def test_calculate_isotropic_incoherent_spectrum_no_cross_section(
     a = b.to_atomic_displacements(crystal=modes.crystal)
 
     spectra = calculate_isotropic_incoherent_spectra(
-        modes, b, a, tosca_q2, bins, apply_cross_section=False, include_dw=True
+        modes, b, a, q2, bins, apply_cross_section=False, include_dw=True
     )
     spectrum = spectra.sum()
 
