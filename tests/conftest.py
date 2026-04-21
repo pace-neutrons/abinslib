@@ -19,6 +19,7 @@ def _get_modes(name: str) -> QpointPhononModes:
         str(test_data / f"{name}_qpoint_phonon_modes.json")
     )
 
+
 def _get_q2(name: str) -> Quantity:
     q2 = np.load(test_data / f"{name}_modes_q2.npy")
     return Quantity(q2, "angstrom^-2")
