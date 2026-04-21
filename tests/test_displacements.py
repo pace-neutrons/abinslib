@@ -10,10 +10,8 @@ import pytest
 from abinslib.displacements import Displacements
 
 
-def test_displacements():
+def test_displacements(rng):
     """Self-consistency check of displacements properties"""
-
-    rng = np.random.default_rng(seed=1)
 
     displacements = Displacements(
         displacements=rng.random((2, 4, 5, 3, 3)),
