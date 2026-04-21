@@ -10,34 +10,35 @@ from abinslib.almost_isotropic_incoherent import (
 )
 
 
-@pytest.mark.parametrize(("modes", "tosca_q2"), [("GaSb", "GaSb")], indirect=True)
+@pytest.mark.parametrize("tosca_modes", ["GaSb"], indirect=True)
 def test_calculate_almost_isotropic_incoherent_fundamentals(
-    modes, tosca_q2, ndarrays_regression
+    tosca_modes, ndarrays_regression
 ):
     temperature = Quantity(100, "kelvin")
-    b = Displacements.from_modes(modes, temperature=temperature)
+    b = Displacements.from_modes(tosca_modes.modes, temperature=temperature)
     a = b.to_atomic_displacements()
 
     intensities = calculate_almost_isotropic_incoherent_fundamentals(
-        mode_displacements=b, atomic_displacements=a, nominal_q2=tosca_q2
+        mode_displacements=b, atomic_displacements=a, nominal_q2=tosca_modes.q2
     )
     ndarrays_regression.check({"intensities": intensities})
 
 
 @pytest.mark.parametrize(
-    ("temperature_k", "modes", "tosca_q2"),
+    ("temperature_k", "tosca_modes"),
     [
-        (10, "GaSb", "GaSb"),
-        (100, "GaSb", "GaSb"),
-        (10, "ethanol", "ethanol"),
-        (100, "ethanol", "ethanol"),
+        (10, "GaSb"),
+        (100, "GaSb"),
+        (10, "ethanol"),
+        (100, "ethanol"),
     ],
-    indirect=["modes", "tosca_q2"],
+    indirect=["tosca_modes"],
 )
 def test_calculate_isotropic_incoherent_spectrum(
-    temperature_k, modes, tosca_q2, ndarrays_regression
+    temperature_k, tosca_modes, ndarrays_regression
 ):
     """Test almost-isotropic fundamentals"""
+    modes, q2 = tosca_modes
 
     temperature = Quantity(temperature_k, "K")
     bins = Quantity(np.arange(0, 8000, 1), "cm_1")
@@ -45,7 +46,7 @@ def test_calculate_isotropic_incoherent_spectrum(
     b = Displacements.from_modes(modes=modes, temperature=temperature)
     a = b.to_atomic_displacements(crystal=modes.crystal)
 
-    spectra = calculate_almost_isotropic_incoherent_spectra(modes, b, a, tosca_q2, bins)
+    spectra = calculate_almost_isotropic_incoherent_spectra(modes, b, a, q2, bins)
 
     ndarrays_regression.check(
         {

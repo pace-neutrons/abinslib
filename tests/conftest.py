@@ -1,3 +1,4 @@
+from typing import NamedTuple
 from pathlib import Path
 
 from euphonic import QpointPhononModes, Quantity
@@ -8,13 +9,25 @@ import pytest
 test_data = Path(__file__).parent / "data"
 
 
-@pytest.fixture(scope="session")
-def modes(request):
-    """Precalculated phonon modes"""
-    name = request.param
+class ToscaModes(NamedTuple):
+    modes: QpointPhononModes
+    q2: Quantity
+
+
+def _get_modes(name: str) -> QpointPhononModes:
     return QpointPhononModes.from_json_file(
         str(test_data / f"{name}_qpoint_phonon_modes.json")
     )
+
+def _get_q2(name: str) -> Quantity:
+    q2 = np.load(test_data / f"{name}_modes_q2.npy")
+    return Quantity(q2, "angstrom^-2")
+
+
+@pytest.fixture(scope="session")
+def modes(request):
+    """Precalculated phonon modes"""
+    return _get_modes(request.param)
 
 
 @pytest.fixture(scope="session")
@@ -26,8 +39,16 @@ def ref_npz(request):
 @pytest.fixture(scope="session")
 def tosca_q2(request):
     """Nominal Q2 values corresponding to a 'modes' for Mantid-like TOSCA"""
-    q2 = np.load(test_data / f"{request.param}_modes_q2.npy")
-    return Quantity(q2, "angstrom^-2")
+    return _get_q2(request.param)
+
+
+@pytest.fixture(scope="session")
+def tosca_modes(request):
+    """Phonon modes with nominal Q2 values for Mantid-like TOSCA"""
+    return ToscaModes(
+        _get_modes(request.param),
+        _get_q2(request.param),
+    )
 
 
 @pytest.fixture
