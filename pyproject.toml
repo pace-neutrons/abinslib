@@ -14,7 +14,6 @@ dependencies = [
 
 [dependency-groups]
 test = [
-    "packaging~=26.1",
     "pytest>=9.0,<10.0",
     "pytest-regressions[num]~=2.10.0",
     "pytest-cov~=7.0",
