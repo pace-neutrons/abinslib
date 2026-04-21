@@ -37,12 +37,6 @@ def ref_npz(request):
 
 
 @pytest.fixture(scope="session")
-def tosca_q2(request):
-    """Nominal Q2 values corresponding to a 'modes' for Mantid-like TOSCA"""
-    return _get_q2(request.param)
-
-
-@pytest.fixture(scope="session")
 def tosca_modes(request):
     """Phonon modes with nominal Q2 values for Mantid-like TOSCA"""
     return ToscaModes(
