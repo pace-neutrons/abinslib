@@ -30,7 +30,7 @@ def tosca_q2(request):
     return Quantity(q2, "angstrom^-2")
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def rng(request):
     """A numpy Generator instance
 
