@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "abins-lib"
-version = "0.0.1"
+dynamic = ["version"]
 requires-python = ">=3.11"
 
 dependencies = [
@@ -27,6 +27,9 @@ dev = [
 
 [project.urls]
 Repository = "https://github.com/pace-neutrons/abins-lib"
+
+[tool.setuptools.dynamic]
+version = {attr = "abinslib.__version__"}
 
 [tool.setuptools.packages.find]
 where =  ["src"]
