@@ -18,15 +18,15 @@ The preferred data type for A is the DebyeWaller class from Euphonic.
 """
 
 from __future__ import annotations
+
 from dataclasses import dataclass
 from functools import cached_property
-from typing import Self, TYPE_CHECKING
+from typing import TYPE_CHECKING, Self
 
 from euphonic import Crystal, DebyeWaller, Quantity
 import numpy as np
 
 from .bose import BoseOccupation, calculate_bose_factor
-
 
 if TYPE_CHECKING:
     from euphonic import QpointPhononModes

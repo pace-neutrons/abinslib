@@ -1,13 +1,15 @@
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
-from euphonic import ureg, DebyeWaller, Quantity
+from euphonic import DebyeWaller, Quantity, ureg
 from euphonic.crystal import Crystal
 from euphonic.spectra import Spectrum1DCollection
 import numpy as np
 
 if TYPE_CHECKING:
     from euphonic import QpointPhononModes
+
     from . import Displacements
 
 

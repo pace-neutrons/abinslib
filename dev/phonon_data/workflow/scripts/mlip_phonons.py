@@ -4,8 +4,8 @@ import numpy as np
 from phonopy import Phonopy
 from phonopy.file_IO import write_force_constants_to_hdf5
 from phonopy.structure.atoms import PhonopyAtoms
-from tqdm import tqdm
 from snakemake.script import snakemake
+from tqdm import tqdm
 from upet.calculator import UPETCalculator
 
 

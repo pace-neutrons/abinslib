@@ -1,10 +1,9 @@
 from tempfile import TemporaryDirectory
 
+import abins.parameters
 from euphonic import Quantity, Spectrum1D
 import mantid.simpleapi
 from snakemake.script import snakemake
-
-import abins.parameters
 
 WORKSPACE = "wrk"
 

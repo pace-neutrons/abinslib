@@ -3,8 +3,8 @@ from numpy.testing import assert_allclose
 import pytest
 
 from abinslib.bose import (
-    NegativeTemperatureError,
     BoseOccupation,
+    NegativeTemperatureError,
     calculate_bose_factor,
 )
 

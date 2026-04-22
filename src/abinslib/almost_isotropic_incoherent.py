@@ -1,6 +1,7 @@
 """Semi-analytic powder averaging approximations in CLIMAX/AbINS lineage"""
 
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 from euphonic.spectra import Spectrum1DCollection

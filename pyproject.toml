@@ -51,9 +51,16 @@ select = [
        "UP",
        "COM",     # flake8-commas
        "PT",      # flake8-pytest-style
+       "I",
+       "C4",
+       "A",
+       "T10",
+       "Q",
+       "N",
 ]
 ignore = [
        "COM812",
+       "N806"
 ]
 
 [tool.ruff.lint.isort]
