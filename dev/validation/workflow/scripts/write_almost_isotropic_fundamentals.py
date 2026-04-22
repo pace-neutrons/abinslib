@@ -2,11 +2,10 @@ from euphonic import QpointPhononModes, Quantity, Spectrum1D
 import numpy as np
 from snakemake.script import snakemake
 
-from abinslib.displacements import Displacements
 from abinslib.almost_isotropic_incoherent import (
     calculate_almost_isotropic_incoherent_spectra,
 )
-
+from abinslib.displacements import Displacements
 from abinslib.util import calculate_indirect_q2
 
 modes = QpointPhononModes.from_json_file(snakemake.input[0])

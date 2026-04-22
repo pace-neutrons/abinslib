@@ -4,7 +4,6 @@ from snakemake.script import snakemake
 
 from abinslib.displacements import Displacements
 from abinslib.isotropic_incoherent import q_scaling_isotropic_incoherent_spectra
-
 from abinslib.util import calculate_indirect_q2
 
 modes = QpointPhononModes.from_json_file(snakemake.input[0])

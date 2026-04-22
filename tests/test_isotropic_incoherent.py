@@ -5,17 +5,15 @@ import numpy as np
 from numpy.testing import assert_allclose
 import pytest
 
-
-import abinslib.isotropic_incoherent
 from abinslib.displacements import (
     Displacements,
 )
+import abinslib.isotropic_incoherent
 from abinslib.isotropic_incoherent import (
     calculate_isotropic_dw_factor,
     calculate_isotropic_incoherent_spectra,
     q_scaling_isotropic_incoherent_spectra,
 )
-
 
 test_data = Path(__file__).parent / "data"
 
