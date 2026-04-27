@@ -60,8 +60,12 @@ select = [
 ]
 ignore = [
        "COM812",
-       "N806"
 ]
 
 [tool.ruff.lint.isort]
 force-sort-within-sections = true
+
+[tool.ruff.lint.pep8-naming]
+extend-ignore-names = [
+    "kT",
+]
