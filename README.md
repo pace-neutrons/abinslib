@@ -2,7 +2,7 @@
 [![Run tests][ci-badge]][ci-link]
 [![License][license-badge]][license-link]
 
-# abins-lib
+# abinslib
 Dynamical structure factor calculations
 
 This is still an experimental playground, please do not use for production.
@@ -61,7 +61,7 @@ cross-section references.
 
 [ruff-badge]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json
 [ruff-link]: https://github.com/astral-sh/ruff
-[ci-badge]: https://github.com/pace-neutrons/abins-lib/actions/workflows/test.yml/badge.svg
-[ci-link]: https://github.com/pace-neutrons/abins-lib/actions/workflows/test.yml
+[ci-badge]: https://github.com/pace-neutrons/abinslib/actions/workflows/test.yml/badge.svg
+[ci-link]: https://github.com/pace-neutrons/abinslib/actions/workflows/test.yml
 [license-badge]: https://img.shields.io/badge/License-GPLv3-blue.svg
 [license-link]: https://www.gnu.org/licenses/gpl-3.0

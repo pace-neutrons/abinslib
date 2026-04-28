@@ -9,7 +9,7 @@ with appropriate Bose occupation gives a physical distribution known in various
 forms as 'A', 'Atomic Displacement Parameters', 'U', ... and sometimes even
 'B'.
 
-In abins-lib these are referred to respectively as 'mode displacements' and
+In abinslib these are referred to respectively as 'mode displacements' and
 'atomic displacements' where space permits, or 'B' and 'A' in compact notation,
 downcased to 'b' and 'a' in python variable names.
 
