@@ -1,6 +1,13 @@
+# Mac garbage
+.DS_Store
+
 # Snakemake resources and results
 .snakemake/
 dev/phonon_data/results/*
+dev/validation/results/*
+
+# "obtained" comparison files for pytest-regression
+tests/regression_data/**/*.obtained.*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

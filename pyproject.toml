@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "abins-lib"
-version = "0.0.1"
+dynamic = ["version"]
 requires-python = ">=3.11"
 
 dependencies = [
@@ -13,8 +13,12 @@ dependencies = [
 ]
 
 [dependency-groups]
-test = ["pytest>=9.0,<10.0"]
-lint = ["ruff>=0.15.2,<1.0"]
+test = [
+    "pytest>=9.0,<10.0",
+    "pytest-regressions[num]~=2.10.0",
+    "pytest-cov~=7.0",
+]
+lint = ["ruff==0.15.11"]
 dev = [
     {include-group = 'test'},
     {include-group = 'lint'},
@@ -22,6 +26,9 @@ dev = [
 
 [project.urls]
 Repository = "https://github.com/pace-neutrons/abins-lib"
+
+[tool.setuptools.dynamic]
+version = {attr = "abinslib.__version__"}
 
 [tool.setuptools.packages.find]
 where =  ["src"]
@@ -43,6 +50,7 @@ select = [
        "E",
        "UP",
        "COM",     # flake8-commas
+       "PT",      # flake8-pytest-style
 ]
 ignore = [
        "COM812",

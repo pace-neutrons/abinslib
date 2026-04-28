@@ -1,7 +1,4 @@
-from itertools import product
-from pathlib import Path
-
-from euphonic import QpointPhononModes, Quantity
+from euphonic import Quantity
 import numpy as np
 import pytest
 
@@ -11,59 +8,51 @@ from abinslib.almost_isotropic_incoherent import (
     calculate_almost_isotropic_incoherent_fundamentals,
     calculate_almost_isotropic_incoherent_spectra,
 )
-from abinslib.util import calculate_indirect_q2
-
-test_data = Path(__file__).parent / "data"
 
 
-@pytest.fixture(scope="module")
-def ref_modes() -> dict[str, QpointPhononModes]:
-    """Precalculated phonon modes, by name"""
-    return {
-        name: QpointPhononModes.from_json_file(
-            str(test_data / f"{name}_qpoint_phonon_modes.json")
-        )
-        for name in ["GaSb", "ethanol"]
-    }
-
-
-def test_calculate_almost_isotropic_incoherent_fundamentals(ref_modes):
+@pytest.mark.parametrize("tosca_modes", ["GaSb"], indirect=True)
+def test_calculate_almost_isotropic_incoherent_fundamentals(
+    tosca_modes, ndarrays_regression
+):
     temperature = Quantity(100, "kelvin")
-    modes = ref_modes["GaSb"]
-    b = Displacements.from_modes(modes, temperature=temperature)
+    b = Displacements.from_modes(tosca_modes.modes, temperature=temperature)
     a = b.to_atomic_displacements()
 
-    q2 = calculate_indirect_q2(
-        modes.frequencies,
-        angle=(134.98885653282196 * np.pi / 180),
-        final_energy=Quantity(32.0, "cm_1").to("hartree"),
+    intensities = calculate_almost_isotropic_incoherent_fundamentals(
+        mode_displacements=b, atomic_displacements=a, nominal_q2=tosca_modes.q2
     )
-
-    _ = calculate_almost_isotropic_incoherent_fundamentals(
-        mode_displacements=b, atomic_displacements=a, nominal_q2=q2
-    )
+    ndarrays_regression.check({"intensities": intensities})
 
 
 @pytest.mark.parametrize(
-    "temperature_k,system", product([10, 100], ["GaSb", "ethanol"])
+    ("temperature_k", "tosca_modes"),
+    [
+        (10, "GaSb"),
+        (100, "GaSb"),
+        (10, "ethanol"),
+        (100, "ethanol"),
+    ],
+    indirect=["tosca_modes"],
 )
 def test_calculate_isotropic_incoherent_spectrum(
-    temperature_k,
-    ref_modes,
-    system,
+    temperature_k, tosca_modes, ndarrays_regression
 ):
     """Test almost-isotropic fundamentals"""
-    modes = ref_modes[system]
+    modes, q2 = tosca_modes
 
     temperature = Quantity(temperature_k, "K")
-    ref_data = np.load(test_data / f"{system}_abins_{temperature_k}k_isotropic_raw.npz")
-
-    bins = Quantity(ref_data["energy"], str(ref_data["energy_unit"]))
+    bins = Quantity(np.arange(0, 8000, 1), "cm_1")
 
     b = Displacements.from_modes(modes=modes, temperature=temperature)
     a = b.to_atomic_displacements(crystal=modes.crystal)
 
-    # Q2 calculated at exact Mantid-Abins TOSCA backscattering angle
-    q2 = Quantity(np.load(test_data / f"{system}_modes_q2.npy"), "angstrom^-2")
+    spectra = calculate_almost_isotropic_incoherent_spectra(modes, b, a, q2, bins)
 
-    _ = calculate_almost_isotropic_incoherent_spectra(modes, b, a, q2, bins)
+    ndarrays_regression.check(
+        {
+            "x_data": spectra.x_data.magnitude,
+            "y_data": spectra.y_data.magnitude,
+            "x_data_unit": spectra.x_data_unit,
+            "y_data_unit": spectra.y_data_unit,
+        }
+    )

@@ -201,14 +201,6 @@ def q_scaling_isotropic_incoherent_spectra(
         include_dw=False,
     )
 
-    if not isinstance(spectra, Spectrum1DCollection):
-        raise TypeError("Only 1D spectra supported at this point")
-
-    if any(
-        map((lambda metadata: metadata["quantum_order"] != 1), spectra.iter_metadata())
-    ):
-        raise ValueError("Only order 1 supported at this point")
-
     # More generally this factor is Q^2N / N!
     q2_scale = nominal_q2 / Quantity(1, "Å^-2")
 

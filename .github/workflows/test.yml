@@ -27,6 +27,38 @@ jobs:
           pip install . --group test
 
       - name: Test with pytest
+        if: ${{ matrix.python_version == '3.11' }}
         shell: bash -el {0}
         run: |
           pytest
+
+      - name: Test with pytest-cov
+        if: ${{ matrix.python_version == '3.14' }}
+        shell: bash -el {0}
+        run: |
+          pytest --cov=abinslib --cov-report xml --cov-report markdown-append:$GITHUB_STEP_SUMMARY --cov-report term-missing
+
+      - name: Upload coverage
+        if: ${{ matrix.python_version == '3.14' && ( success() || failure() ) }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Coverage XML
+          path: coverage.xml
+
+  publish-coverage:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          name: 'Coverage XML'
+
+      - name: Get Coverage
+        uses: orgoro/coverage@v3.2
+        continue-on-error: true
+        with:
+          coverageFile: 'artifacts/coverage.xml'
+          token: ${{ secrets.GITHUB_TOKEN }}
+          thresholdModified: 0.9

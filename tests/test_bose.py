@@ -41,7 +41,32 @@ def test_relative_factors(frequencies, temperature):
     assert_allclose(two_n_plus_one, 2 * n + 1.0)
 
 
+@pytest.mark.parametrize(
+    ("occupation", "expected"),
+    [
+        (BoseOccupation.ONE, 1.0),
+        (BoseOccupation.N, 0.0),
+        (BoseOccupation.N_PLUS_ONE, 1.0),
+        (BoseOccupation.TWO_N_PLUS_ONE, 1.0),
+    ],
+)
+def test_zero_t_factors(frequencies, occupation, expected):
+    assert_allclose(
+        calculate_bose_factor(frequencies, Quantity(0, "kelvin"), occupation),
+        expected,
+    )
+
+
+@pytest.mark.parametrize("temperature", [Quantity(10, "K"), Quantity(0, "K")])
 @pytest.mark.parametrize("occupation", [1, "N", None, True])
 def test_bad_occupation_type(frequencies, temperature, occupation):
     with pytest.raises(TypeError, match="Not a valid occupation number"):
         calculate_bose_factor(frequencies, temperature, occupation)
+
+
+def test_factors_regression(frequencies, temperature, num_regression):
+    """Check values from calculate_bose_factor have not changed"""
+    factor = calculate_bose_factor(
+        frequencies, temperature, occupation=BoseOccupation.N
+    )
+    num_regression.check({"bose_factor": factor})
