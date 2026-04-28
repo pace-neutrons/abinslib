@@ -77,7 +77,7 @@ rule write_isotropic_fundamentals:
     output:
         "results/{label}_isotropic_fundamentals.json",
     conda:
-        "envs/abins-lib.yml"
+        "envs/abinslib.yml"
     script:
         "scripts/write_isotropic_fundamentals.py"
 
@@ -90,6 +90,6 @@ rule write_almost_isotropic_fundamentals:
     output:
         "results/{label}_almost_isotropic_fundamentals.json",
     conda:
-        "envs/abins-lib.yml"
+        "envs/abinslib.yml"
     script:
         "scripts/write_almost_isotropic_fundamentals.py"
