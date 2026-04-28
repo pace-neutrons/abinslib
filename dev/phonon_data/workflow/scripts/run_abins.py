@@ -1,9 +1,11 @@
 from tempfile import TemporaryDirectory
 
-import abins.parameters
 import mantid.simpleapi
 import numpy as np
 from snakemake.script import snakemake
+
+import abins.parameters  # isort:skip
+
 
 WORKSPACE = "wrk"
 
