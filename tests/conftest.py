@@ -1,9 +1,9 @@
-from typing import NamedTuple
 from pathlib import Path
+from typing import NamedTuple
 
 from euphonic import QpointPhononModes, Quantity
 import numpy as np
-from numpy.random import Generator, PCG64
+from numpy.random import PCG64, Generator
 import pytest
 
 test_data = Path(__file__).parent / "data"
