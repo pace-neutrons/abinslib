@@ -7,7 +7,6 @@ from abinslib.almost_isotropic_incoherent import (
     calculate_almost_isotropic_incoherent_spectra,
 )
 from abinslib.displacements import Displacements
-from abinslib.util import calculate_indirect_q2
 
 
 @pytest.mark.parametrize("tosca_modes", ["GaSb"], indirect=True)
