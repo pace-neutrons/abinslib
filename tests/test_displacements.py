@@ -52,20 +52,19 @@ def test_calculate_adp(modes, abins_average_a_traces):
 
     dw = Displacements.from_modes(
         modes, temperature=Quantity(100, "K")
-    ).to_atomic_displacements(crystal=modes.crystal)
+    ).to_atomic_displacements()
 
     euphonic_dw = modes.calculate_debye_waller(
         temperature=Quantity(100, "K"),
         frequency_min=Quantity(0.01, "meV"),
         symmetrise=False,
-    )
+    ).debye_waller
 
-    assert dw.temperature == euphonic_dw.temperature
-    assert dw.debye_waller.units == euphonic_dw.debye_waller.units
-    assert_allclose(dw.debye_waller.magnitude, euphonic_dw.debye_waller.magnitude)
+    assert dw.units == euphonic_dw.units
+    assert_allclose(dw.magnitude, euphonic_dw.magnitude)
 
     assert_allclose(
-        np.trace(dw.debye_waller.to("angstrom^2").magnitude, axis1=1, axis2=2),
+        np.trace(dw.to("angstrom^2").magnitude, axis1=1, axis2=2),
         np.array(abins_average_a_traces) / 2,
         atol=1e-8,
     )
@@ -78,7 +77,7 @@ def test_dw_regression(modes, temperature_k, ndarrays_regression):
     dw = Displacements.from_modes(
         modes, temperature=Quantity(temperature_k, "K")
     ).to_atomic_displacements()
-    ndarrays_regression.check({"dw": dw.debye_waller.to("angstrom^2").magnitude})
+    ndarrays_regression.check({"dw": dw.to("angstrom^2").magnitude})
 
 
 @pytest.mark.parametrize(
@@ -97,7 +96,7 @@ def test_a_abins_ref(modes, ref_npz) -> None:
         modes, temperature=Quantity(100, "K")
     ).to_atomic_displacements()
     assert_allclose(
-        np.trace(dw.debye_waller.to("angstrom^2").magnitude, axis1=1, axis2=2),
+        np.trace(dw.to("angstrom^2").magnitude, axis1=1, axis2=2),
         ref_a_traces / 2,
         atol=1e-8,
     )

@@ -13,7 +13,8 @@ In abinslib these are referred to respectively as 'mode displacements' and
 'atomic displacements' where space permits, or 'B' and 'A' in compact notation,
 downcased to 'b' and 'a' in python variable names.
 
-The preferred data type for A is the DebyeWaller class from Euphonic.
+The Quantity A is equal to the debye_waller attribute of the DebyeWaller
+class from Euphonic and may be read/stored from that class as convenient.
 
 """
 
@@ -23,7 +24,7 @@ from dataclasses import dataclass
 from functools import cached_property
 from typing import TYPE_CHECKING, Self
 
-from euphonic import Crystal, DebyeWaller, Quantity
+from euphonic import Quantity
 import numpy as np
 
 from .bose import BoseOccupation, calculate_bose_factor
@@ -109,48 +110,41 @@ class Displacements:
     def two_n_plus_one(self) -> Quantity:
         return np.einsum("ij,ij...->ij...", 2.0 * self.bose_n + 1.0, self.displacements)
 
-    def to_atomic_displacements(
-        self,
-        *,
-        crystal: Crystal | None = None,
-    ) -> DebyeWaller:
+    def to_atomic_displacements(self) -> Quantity:
         """Calculate atomic displacement tensor (A) for each atom
 
-        The return type is a Euphonic DebyeWaller object: "DebyeWaller" in
-        Euphonic terminology is identical to A in CLIMAX terminology.  In
-        Euphonic coherent scattering intensity calculations, the Debye—Waller
-        intensity factor appears as exp(-W_k) inside a square of sums.
+        This is given in the same scaling convention as the "debye_waller"
+        attribute of the DebyeWaller class in Euphonic, and may be used to
+        initialize this class correctly. The value is half the "A" used in
+        CLIMAX terminology, but for convenience the array is sometimes referred
+        to as "a" or "A" in this codebase.
+
+        In Euphonic coherent scattering intensity calculations, the
+        Debye—Waller intensity factor appears as exp(-W_k) inside a square of
+        sums.
 
         In incoherent intensity calculations the Debye—Waller factor typically
         appears as a pure factor exp(-2W_k).
 
-        In both cases W_k is the displacement tensor of an atom summed over all
-        phonon modes - i.e. "A".
+        In both cases W_k is related to the displacement tensor of a given atom
+        summed over all phonon modes.
 
-        Parameters
-        ----------
-        crystal
-          If provided, this is attached to output DebyeWaller data. Otherwise,
-          a dummy dataset is produced.
+        Returns
+        -------
+        Quantity
+          Array with length^2 dimensions,
+          indices (atom_index, direction, direction)
+
+          (i.e. a 3x3 quadratic displacement tensor per atom).
 
         """
-        if crystal is None:
-            n_atoms = self.displacements.shape[2]
-            cell_vectors = Quantity(np.eye(3), "Å")
-            atom_r = np.zeros((n_atoms, 3))
-            atom_type = np.array([""] * n_atoms)
-            atom_mass = Quantity(np.zeros(n_atoms), "amu")
-            crystal = Crystal(cell_vectors, atom_r, atom_type, atom_mass)
-
         dw = np.einsum(
             "ijklm,i->klm",
             self.two_n_plus_one.magnitude,
             self.weights * 0.5,  # q-point symm weights, /2 scale convention for W
         )
 
-        return DebyeWaller(
-            crystal, Quantity(dw, self.displacements.units), self.temperature
-        )
+        return Quantity(dw, self.displacements.units)
 
 
 def _calculate_mode_displacements(
@@ -160,10 +154,11 @@ def _calculate_mode_displacements(
 ) -> Quantity:
     """Get the 3x3 displacement tensor (B) for each atom and phonon mode
 
-    Output array indices: (qpt, mode, atom, direction, direction)
-
-    Implementation is heavily based on the Euphonic
-    QpointPhononModes.calculate_debye_waller
+    Returns
+    -------
+    Quantity:
+      Displacement array with length^2 dimensions and array indices: (qpt,
+      mode, atom, direction, direction)
 
     """
     # Cast frequencies to atomic units -> displacement results in Bohr

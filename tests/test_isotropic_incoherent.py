@@ -86,7 +86,7 @@ def test_calculate_isotropic_incoherent_spectrum(
     ref_intensity = ref_npz["intensity"]
 
     b = Displacements.from_modes(modes=modes, temperature=temperature)
-    a = b.to_atomic_displacements(crystal=modes.crystal)
+    a = b.to_atomic_displacements()
 
     spectra = calculate_isotropic_incoherent_spectra(modes, b, a, q2, bins)
     spectrum = spectra.sum()
@@ -118,7 +118,7 @@ def test_calculate_isotropic_incoherent_spectrum_no_cross_section(
     bins = Quantity(np.linspace(0, 1000, 400), "cm_1")
 
     b = Displacements.from_modes(modes=modes, temperature=temperature)
-    a = b.to_atomic_displacements(crystal=modes.crystal)
+    a = b.to_atomic_displacements()
 
     spectra = calculate_isotropic_incoherent_spectra(
         modes, b, a, q2, bins, apply_cross_section=False, include_dw=True

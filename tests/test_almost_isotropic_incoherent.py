@@ -44,7 +44,7 @@ def test_calculate_isotropic_incoherent_spectrum(
     bins = Quantity(np.arange(0, 8000, 1), "cm_1")
 
     b = Displacements.from_modes(modes=modes, temperature=temperature)
-    a = b.to_atomic_displacements(crystal=modes.crystal)
+    a = b.to_atomic_displacements()
 
     spectra = calculate_almost_isotropic_incoherent_spectra(modes, b, a, q2, bins)
 

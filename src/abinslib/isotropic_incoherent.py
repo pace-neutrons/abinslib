@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from euphonic import DebyeWaller, Quantity, ureg
+from euphonic import Quantity, ureg
 from euphonic.crystal import Crystal
 from euphonic.spectra import Spectrum1DCollection
 import numpy as np
@@ -35,7 +35,7 @@ def _get_total_cross_sections(crystal: Crystal) -> Quantity:
 def calculate_isotropic_incoherent_fundamentals(
     modes: QpointPhononModes,
     mode_displacements: Quantity,
-    atomic_displacements: DebyeWaller,
+    atomic_displacements: Quantity,
     nominal_q2: Quantity,
     include_dw: bool = True,
 ) -> np.ndarray:
@@ -68,10 +68,10 @@ def calculate_isotropic_incoherent_fundamentals(
 
 
 def calculate_isotropic_dw_factor(
-    atomic_displacements: DebyeWaller,
+    atomic_displacements: Quantity,
     q2: Quantity,
 ) -> np.ndarray:
-    dw = atomic_displacements.debye_waller.to("bohr^2").magnitude
+    dw = atomic_displacements.to("bohr^2").magnitude
 
     return np.exp(
         -2  # Mantid incorporates this factor 2 into A
@@ -128,7 +128,7 @@ def _bin_mode_intensities(
 def calculate_isotropic_incoherent_spectra(
     modes: QpointPhononModes,
     mode_displacements: Displacements,
-    atomic_displacements: DebyeWaller,
+    atomic_displacements: Quantity,
     nominal_q2: Quantity,
     bins: Quantity,
     apply_cross_section: bool = True,
@@ -172,7 +172,7 @@ def calculate_isotropic_incoherent_spectra(
 def q_scaling_isotropic_incoherent_spectra(
     modes: QpointPhononModes,
     mode_displacements: Displacements,
-    atomic_displacements: DebyeWaller,
+    atomic_displacements: Quantity,
     nominal_q2: Quantity,
     bins: Quantity,
 ) -> Spectrum1DCollection:
