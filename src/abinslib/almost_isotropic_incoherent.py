@@ -11,12 +11,12 @@ from .displacements import Displacements
 from .isotropic_incoherent import _bin_mode_intensities
 
 if TYPE_CHECKING:
-    from euphonic import DebyeWaller, QpointPhononModes, Quantity
+    from euphonic import QpointPhononModes, Quantity
 
 
 def calculate_almost_isotropic_incoherent_fundamentals(
     mode_displacements: Displacements,
-    atomic_displacements: DebyeWaller,
+    atomic_displacements: Quantity,
     nominal_q2: Quantity,
 ) -> np.ndarray:
     """Calculate fundamental mode intensities in almost-isotropic approximation
@@ -39,7 +39,7 @@ def calculate_almost_isotropic_incoherent_fundamentals(
         / 3
     )
 
-    a = atomic_displacements.debye_waller.to("bohr^2").magnitude * 2
+    a = atomic_displacements.to("bohr^2").magnitude * 2
     b = mode_displacements.n_plus_one.to("bohr^2").magnitude
     a_trace = np.einsum("...ii", a)
     b_trace = np.einsum("...ii", b)
@@ -62,7 +62,7 @@ def calculate_almost_isotropic_incoherent_fundamentals(
 def calculate_almost_isotropic_incoherent_spectra(
     modes: QpointPhononModes,
     mode_displacements: Displacements,
-    atomic_displacements: DebyeWaller,
+    atomic_displacements: Quantity,
     nominal_q2: Quantity,
     bins: Quantity,
     apply_cross_section: bool = True,
