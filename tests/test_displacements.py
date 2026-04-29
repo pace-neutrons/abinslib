@@ -50,7 +50,7 @@ def test_calculate_adp(modes, abins_average_a_traces):
 
     """
 
-    dw = Displacements.from_modes(
+    atomic_displacements = Displacements.from_modes(
         modes, temperature=Quantity(100, "K")
     ).to_atomic_displacements()
 
@@ -60,11 +60,11 @@ def test_calculate_adp(modes, abins_average_a_traces):
         symmetrise=False,
     ).debye_waller
 
-    assert dw.units == euphonic_dw.units
-    assert_allclose(dw.magnitude, euphonic_dw.magnitude)
+    assert atomic_displacements.units == euphonic_dw.units
+    assert_allclose(atomic_displacements.magnitude, euphonic_dw.magnitude)
 
     assert_allclose(
-        np.trace(dw.to("angstrom^2").magnitude, axis1=1, axis2=2),
+        np.trace(atomic_displacements.to("angstrom^2").magnitude, axis1=1, axis2=2),
         np.array(abins_average_a_traces) / 2,
         atol=1e-8,
     )
