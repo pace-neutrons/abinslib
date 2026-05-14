@@ -4,14 +4,19 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from euphonic import Quantity, ureg
 from euphonic.spectra import Spectrum1DCollection
 import numpy as np
 
 from .displacements import Displacements
-from .isotropic_incoherent import _bin_mode_intensities
+from .isotropic_incoherent import (
+    _bin_mode_intensities,
+    _get_total_cross_sections,
+    calculate_isotropic_dw_factor,
+)
 
 if TYPE_CHECKING:
-    from euphonic import QpointPhononModes, Quantity
+    from euphonic import QpointPhononModes
 
 
 def calculate_almost_isotropic_incoherent_fundamentals(
@@ -59,6 +64,85 @@ def calculate_almost_isotropic_incoherent_fundamentals(
     return q2_term * exp_term
 
 
+def calculate_almost_isotropic_incoherent_combinations(
+    mode_displacements: Displacements,
+    atomic_displacements: Quantity,
+    nominal_q2: Quantity,
+    include_dw: bool = False,
+) -> np.ndarray:
+    """Calculate second-order mode intensities in almost-isotropic approximation
+
+    S(Q, ω_ν + ω_ν') =
+        exp(-Q^2 tr(A/3)) Q^4 / 15C (tr(B_ν)tr(B_ν') + B_ν:B_ν' + B_ν':B_ν)
+
+    for some atom, where C = 2 if ν=ν' else 1
+
+    - Atomic cross sections not applied
+    - Ignore actual q-points and use nominal Q^2 instead
+
+    Return array indices (qpt1, mode1, qpt2, mode2, atom)
+
+    Note that this has cubic scaling with system size as n_modes ∝ n_atoms;
+    while this reference implementation constructs the whole array,
+    memory-efficient approaches need to reduce the data to binned spectra
+    on-the-fly.
+
+    It is also possible to reduce the calculation effort by calculating at
+    constant Q and rescaling the intensity based on post-binning Q values;
+    this will be implemented as a separate function.
+
+    Args:
+        mode_displacements: fundamental phonon displacements arranged by (q, band, atom)
+        atomic_displacements: thermal average displacement by atom
+        nominal_q2:
+            Q^2 values for each combination of two fundamental modes,
+            indexed by (q, band, q, band)
+        include_dw:
+            Include mode-by-mode Debye-Waller intensity scaling
+
+    """
+    if len(nominal_q2.shape) != 4:
+        msg = (
+            "Expected 4-D nominal Q^2 for combination modes "
+            "with indices (qpt1, mode1, qpt2, mode2)"
+        )
+        raise ValueError(msg)
+
+    q4 = nominal_q2.to("bohr^-2").magnitude ** 2
+
+    b = mode_displacements.n_plus_one.to("bohr^2").magnitude
+    b_trace = np.einsum("...ii", b)
+    tr_term = np.einsum("ijk,lmk->ijlmk", b_trace, b_trace)
+
+    # Double contraction M_ij:M_ij should be commutative! Not clear why this is
+    # traditionally written out as a sum over both orders, we can just *2?
+    # Also as B are symmetric there is no difference between
+    # B_ij:B_ij and B_ij:B_ji
+    double_contraction = np.einsum("ijklm,opklm->ijopk", b, b)
+
+    # Factor 2 if (q, ν) = (q', ν'), else 1
+    n_q = b.shape[0]
+    n_bands = b.shape[1]
+    c = np.eye(n_q * n_bands, n_q * n_bands).reshape(
+        n_q, n_bands, n_q, n_bands
+    ) + np.ones((n_q, n_bands, n_q, n_bands))
+
+    # No funny business here, just expand Q4 and C over atom index m
+    q4_term = np.einsum(
+        "ijkl,ijkl,ijklm->ijklm",
+        q4,
+        1 / (15 * c),
+        tr_term + 2 * double_contraction
+    )
+
+    if include_dw:
+        dw_factor = calculate_isotropic_dw_factor(atomic_displacements, nominal_q2)
+    else:
+        dw_factor = 1.0
+
+    return dw_factor * q4_term
+
+
 def calculate_almost_isotropic_incoherent_spectra(
     modes: QpointPhononModes,
     mode_displacements: Displacements,
@@ -97,3 +181,173 @@ def calculate_almost_isotropic_incoherent_spectra(
         ],
     }
     return Spectrum1DCollection(x_data=bins, y_data=y_data, metadata=metadata)
+
+
+def calculate_almost_isotropic_incoherent_combination_spectra(
+    modes: QpointPhononModes,
+    mode_displacements: Displacements,
+    atomic_displacements: Quantity,
+    nominal_q2: Quantity,
+    bins: Quantity,
+    apply_cross_section: bool = True,
+) -> Spectrum1DCollection:
+    """Calculate two-phonon intensities in almost-isotropic incoherent approximation
+
+    Actual q-points of phonon modes will be disregarded; instead each mode
+    intensity will be based on a separate array of nominal Q^2 values
+    corresponding to modes. This is intended to approximate powder-averaging
+    with kinematic constraints: for indirect geometry the energy-Q^2
+    relationship can be determined using abinslib.utils.calculate_indirect_q2.
+
+    These should be determined for each two-phonon combination
+
+    nominal_q2:
+        Q^2 values for each combination of two fundamental modes,
+        indexed by (q, band, q, band)
+
+    """
+    intensities = calculate_almost_isotropic_incoherent_combinations(
+        mode_displacements=mode_displacements,
+        atomic_displacements=atomic_displacements,
+        nominal_q2=nominal_q2,
+        include_dw=True,
+    )
+
+    y_data = _bin_combination_modes(
+        modes=modes,
+        intensities=intensities,
+        bins=bins,
+        apply_cross_section=apply_cross_section,
+    )
+
+    metadata = {
+        "method": "almost-isotropic incoherent approximation",
+        "cross sections": ("incoherent + coherent" if apply_cross_section else "none"),
+        "line_data": [
+            {"atom_index": i, "atom_symbol": symbol, "quantum_order": 1}
+            for i, symbol in enumerate(modes.crystal.atom_type)
+        ],
+    }
+    return Spectrum1DCollection(x_data=bins, y_data=y_data, metadata=metadata)
+
+
+def q_scaling_almost_isotropic_incoherent_combination_spectra(
+    modes: QpointPhononModes,
+    mode_displacements: Displacements,
+    atomic_displacements: Quantity,
+    nominal_q2: Quantity,
+    bins: Quantity,
+    apply_cross_section: bool = True,
+) -> Spectrum1DCollection:
+    """Calculate two-phonon intensities in almost-isotropic incoherent approximation
+
+    Actual q-points of phonon modes will be disregarded; instead each mode
+    intensity will be based on a separate array of nominal Q^2 values
+    corresponding to modes. This is intended to approximate powder-averaging
+    with kinematic constraints.
+
+    Here we also make the "optimisation" that intensities are initially
+    calculated at Q=1 and then re-scaled after binning. (Not actually a big
+    computational optimisation here as we still multiply a large Q2 array, but
+    it imitates the Mantid implementation.)
+
+    nominal_q2:
+        Q^2 values corresponding to bin centres: for indirect geometry the energy-Q^2
+       relationship can be determined using abinslib.utils.calculate_indirect_q2.
+
+    """
+    intensities = calculate_almost_isotropic_incoherent_combinations(
+        mode_displacements=mode_displacements,
+        atomic_displacements=atomic_displacements,
+        nominal_q2=Quantity(
+            np.ones((*modes.frequencies.shape, *modes.frequencies.shape)), "Å^-2"
+        ),
+        include_dw=False,
+    )
+
+    y_data = _bin_combination_modes(
+        modes=modes,
+        intensities=intensities,
+        bins=bins,
+        apply_cross_section=apply_cross_section,
+    )
+
+    metadata = {
+        "method": "almost-isotropic incoherent approximation",
+        "cross sections": ("incoherent + coherent" if apply_cross_section else "none"),
+        "line_data": [
+            {"atom_index": i, "atom_symbol": symbol, "quantum_order": 1}
+            for i, symbol in enumerate(modes.crystal.atom_type)
+        ],
+    }
+    spectra = Spectrum1DCollection(x_data=bins, y_data=y_data, metadata=metadata)
+
+    q4_scale = nominal_q2**2 / Quantity(1, "Å^-4")
+    dw = calculate_isotropic_dw_factor(
+        atomic_displacements=atomic_displacements,
+        q2=nominal_q2,
+    )
+    spectra.y_data = spectra.y_data * q4_scale * np.swapaxes(dw, -1, -2)[0]
+
+    return spectra
+
+
+def _bin_combination_modes(
+    modes: QpointPhononModes,
+    intensities: np.ndarray,
+    bins: Quantity,
+    apply_cross_section: bool = True,
+) -> Quantity:
+    """Bin intensities corresponding to QpointPhononModes to 1D spectra
+
+    This version is intended for the 2-phonon combination modes, so intensities
+    has shape (q, band, q, band). Each contribution is weighted by the product
+    of q-point weights and positioned at the sum of intensities
+
+    Output array has shape (atom_indices, bin_indices)
+    """
+    bin_width = bins[1] - bins[0]
+
+    if not np.isclose(modes.weights.sum(), 1):
+        raise ValueError(
+            "q-point weights sum to more than 1, this would lead to incorrect "
+            "scaling between order-1 and order-2 spectra."
+        )
+
+    if apply_cross_section:
+        atom_weights = _get_total_cross_sections(modes.crystal).to("barn").magnitude
+    else:
+        atom_weights = np.ones_like(modes.crystal.atom_mass)
+
+    weighted_intensities = np.einsum(
+        "i,k,m,ijklm->ijklm", modes.weights, modes.weights, atom_weights, intensities
+    )
+
+    frequencies = modes.frequencies.to(bins.units).magnitude
+    combination_frequencies = (
+        frequencies[:, :, None, None] + frequencies[None, None, :, :]
+    )
+
+    # reshape for single iteration of frequencies per atom
+    combination_frequencies = combination_frequencies.reshape(-1)
+
+    weighted_intensities = np.moveaxis(weighted_intensities, -1, 0)
+    weighted_intensities = weighted_intensities.reshape(
+        weighted_intensities.shape[0], -1
+    )
+
+    y_data = np.zeros([modes.crystal.n_atoms, len(bins) - 1])
+
+    # Swap atom and freq axes for clean iteration
+    for atom_index, atom_data in enumerate(weighted_intensities):
+        y_q_atom, _ = np.histogram(
+            combination_frequencies,
+            bins=bins.magnitude,
+            weights=atom_data,
+            density=False,
+        )
+        y_data[atom_index] = y_q_atom
+
+    # Apply correct spectral scaling / units
+    y_data = y_data * ureg("barn") / bin_width
+    return y_data
