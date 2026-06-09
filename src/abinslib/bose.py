@@ -68,3 +68,6 @@ def _zero_t_bose_factor(
             return np.zeros_like(frequencies.magnitude)
         case other:
             raise TypeError(f"Not a valid occupation number: {other}")
+
+def untested_adder(a: int, b: int) -> int:
+    return a + b
