@@ -31,12 +31,9 @@ Repository = "https://github.com/pace-neutrons/abinslib"
 source = ["src",
           "*/site-packages",
           ]
+
 [tool.coverage.run]
 source = ["src"]
-
-
-[tool.coverage.xml]
-relative_filename = true
 
 [tool.setuptools.dynamic]
 version = {attr = "abinslib.__version__"}
