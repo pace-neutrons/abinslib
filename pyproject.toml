@@ -27,6 +27,11 @@ dev = [
 [project.urls]
 Repository = "https://github.com/pace-neutrons/abinslib"
 
+[tool.coverage.paths]
+source = ["src/",
+          "/opt/hostedtoolcache/Python/*/site-packages/",
+          ]
+
 [tool.setuptools.dynamic]
 version = {attr = "abinslib.__version__"}
 

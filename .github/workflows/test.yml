@@ -63,4 +63,5 @@ jobs:
         with:
           coverageFile: 'artifacts/coverage.xml'
           token: ${{ secrets.GITHUB_TOKEN }}
+          sourceDir: ./src
           thresholdModified: 0.9
