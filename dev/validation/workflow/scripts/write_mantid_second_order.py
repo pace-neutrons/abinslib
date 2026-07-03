@@ -28,8 +28,10 @@ with TemporaryDirectory() as tmpdir:
 
     mantid.simpleapi.Abins(**abins_kwargs)
 
+
 def _is_o2(ws: str) -> bool:
-    return '_quantum_event_2' in ws
+    return "_quantum_event_2" in ws
+
 
 o2_workspace_names = filter(_is_o2, mantid.simpleapi.mtd.getObjectNames())
 o2_workspaces = [mantid.simpleapi.mtd[name] for name in o2_workspace_names]

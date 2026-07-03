@@ -77,9 +77,8 @@ def test_almost_isotropic_incoherent_combinations(modes):
     b = Displacements.from_modes(modes=modes, temperature=temperature)
     a = b.to_atomic_displacements()
 
-    _ = calculate_almost_isotropic_incoherent_combinations(
-        b, a, q2
-    )
+    _ = calculate_almost_isotropic_incoherent_combinations(b, a, q2)
+
 
 @pytest.mark.parametrize("modes", ["GaSb"], indirect=True)
 def test_q_scaling_combination_spectra(modes):
@@ -98,10 +97,5 @@ def test_q_scaling_combination_spectra(modes):
     a = b.to_atomic_displacements()
 
     _ = q_scaling_almost_isotropic_incoherent_combination_spectra(
-        modes,
-        b,
-        a,
-        nominal_q2,
-        bins,
-        apply_cross_section=True
+        modes, b, a, nominal_q2, bins, apply_cross_section=True
     )
