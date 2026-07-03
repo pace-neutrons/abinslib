@@ -129,10 +129,7 @@ def calculate_almost_isotropic_incoherent_combinations(
 
     # No funny business here, just expand Q4 and C over atom index m
     q4_term = np.einsum(
-        "ijkl,ijkl,ijklm->ijklm",
-        q4,
-        1 / (15 * c),
-        tr_term + 2 * double_contraction
+        "ijkl,ijkl,ijklm->ijklm", q4, 1 / (15 * c), tr_term + 2 * double_contraction
     )
 
     if include_dw:

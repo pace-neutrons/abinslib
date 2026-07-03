@@ -47,6 +47,7 @@ in Mantid by a Snakemake workflow in *dev/validation*:
 
 ![](dev/validation/results/isotropic-plot.png)
 ![](dev/validation/results/almost-isotropic-plot.png)
+![](dev/validation/results/second-order-plot.png)
 
 To reproduce the result so closely it was necessary to apply similar
 implementation details: the `q_scaling_isotropic_incoherent_spectra`
