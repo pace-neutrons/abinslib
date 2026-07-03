@@ -55,7 +55,7 @@ rule validate_second_order_like_mantid:
         label1="calculate_almost_isotropic_incoherent_combinatation_spectra",
         label2="Mantid-Abins almost-isotropic second-order",
         xlim=420,
-        linear=True,
+        # linear=True,
     conda:
         "envs/mantid.yml"
     script:
