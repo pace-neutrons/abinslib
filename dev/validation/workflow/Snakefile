@@ -52,7 +52,7 @@ rule validate_second_order_like_mantid:
     params:
         title=(lambda w: ("Ethanol second order:\n"
                           r"134.99° $E_f = 32 \text{cm}^{-1}$")),
-        label1="calculate_almost_isotropic_incoherent_combinatation_spectra",
+        label1="mantid_like_combination_spectra",
         label2="Mantid-Abins almost-isotropic second-order",
         xlim=420,
         # linear=True,
