@@ -3,7 +3,7 @@ import numpy as np
 from snakemake.script import snakemake
 
 from abinslib.almost_isotropic_incoherent import (
-    q_scaling_almost_isotropic_incoherent_combination_spectra,
+    mantid_like_combination_spectra,
 )
 from abinslib.displacements import Displacements
 from abinslib.util import calculate_indirect_q2
@@ -27,9 +27,7 @@ q2 = calculate_indirect_q2(
     final_energy=Quantity(32.0, "cm_1").to("hartree"),
 )
 
-spectra = q_scaling_almost_isotropic_incoherent_combination_spectra(
-    modes, displacements, dw, q2, bins
-)
-spectrum = spectra.sum()
+spectra = mantid_like_combination_spectra(modes, displacements, dw, q2, bins)
+spectrum = spectra.sum() * 0.5  # MAGIC FUDGE FACTOR
 
 spectrum.to_json_file(snakemake.output[0])
