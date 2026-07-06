@@ -13,4 +13,3 @@ y = np.sin(2 * x)
 
 ax.plot(x, y)
 plt.show()
-
