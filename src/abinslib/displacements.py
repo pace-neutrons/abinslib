@@ -90,7 +90,7 @@ class Displacements:
                 are set to zero. This is intended to eliminate translational
                 modes at the Gamma point; for precise calculations on a fine
                 q-point mesh it may be appropriate to reduce this threshold.
-            
+
         """
         bose_factor = calculate_bose_factor(
             modes.frequencies,

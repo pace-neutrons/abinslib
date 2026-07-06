@@ -81,8 +81,9 @@ extend-ignore-names = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-# Ease docstring requirements for unit tests
+# Ease docstring requirements for unit tests and workflows
 "tests/*" = ["D", "DOC"]
+"dev/*/workflow/*" = ["D", "DOC"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

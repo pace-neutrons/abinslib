@@ -41,7 +41,7 @@ def calculate_bose_factor(
     Returns:
         Bose factor array corresponding to input frequencies (i.e. usually
         indexed (qpt, mode))
-        
+
     """
     if temperature == Quantity(0.0, "kelvin"):
         return _zero_t_bose_factor(frequencies, occupation)
