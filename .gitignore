@@ -6,6 +6,9 @@
 dev/phonon_data/results/*
 dev/validation/results/*
 
+# Auto-generated example gallery source
+docs/source/auto_examples/*
+
 # "obtained" comparison files for pytest-regression
 tests/regression_data/**/*.obtained.*
 

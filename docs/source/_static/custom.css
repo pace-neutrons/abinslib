@@ -1,0 +1,22 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@100..800&display=swap');
+
+
+body {
+    --font-stack: Manrope, system-ui, sans-serif;
+    --font-stack--monospace: "JetBrains Mono", monospace;
+
+
+    --color-brand-primary: #00796B;
+    --color-brand-content: #00796B;
+
+    --color-link: #00796B;
+    --color-link--visited: #00594C;
+
+    --color-admonition-title-background--note: #E0F2F1;
+    --color-admonition-title--note: #00695C;
+
+    --color-api-keyword: #00695C;
+    --color-api-pre-name: #00796B;
+    --color-api-name: #005C66;
+}
