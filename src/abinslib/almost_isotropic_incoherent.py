@@ -27,8 +27,6 @@ def calculate_almost_isotropic_incoherent_fundamentals(
     - Atomic cross sections not applied
     - Ignore actual q-points and use nominal Q^2 instead
 
-    Return array indices (qpt, mode, atom)
-
     Args:
         mode_displacements: phonon mode displacement dataset
         atomic_displacements: thermal average atomic displacements indexed
@@ -37,6 +35,9 @@ def calculate_almost_isotropic_incoherent_fundamentals(
             Scalar Q^2 values corresponding to modes; note that all q-points
             are used and this is typically related to the mode frequency by
             neutron instrument parameters.
+
+    Returns:
+        Dimensionless mode intensities with array indices (qpt, mode, atom)
 
     """
     q2_term = (
@@ -106,7 +107,8 @@ def calculate_almost_isotropic_incoherent_combinations(
             Include mode-by-mode Debye-Waller intensity scaling
 
     Returns:
-        Intensities with array indices (qpt1, mode1, qpt2, mode2, atom)
+        Dimensionless combination mode intensities with array indices
+        (qpt1, mode1, qpt2, mode2, atom)
 
     """
     if len(nominal_q2.shape) != 4:
