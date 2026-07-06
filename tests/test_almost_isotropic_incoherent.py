@@ -1,3 +1,6 @@
+from copy import deepcopy
+from dataclasses import astuple
+
 from euphonic import Quantity
 import numpy as np
 import pytest
@@ -10,16 +13,13 @@ from abinslib.almost_isotropic_incoherent import (
     mantid_like_combination_spectra,
     q_scaling_almost_isotropic_incoherent_combination_spectra,
 )
-from abinslib.displacements import Displacements
 
 
 @pytest.mark.parametrize("tosca_modes", ["GaSb"], indirect=True)
 def test_calculate_almost_isotropic_incoherent_fundamentals(
     tosca_modes, ndarrays_regression
 ):
-    temperature = Quantity(100, "kelvin")
-    b = Displacements.from_modes(tosca_modes.modes, temperature=temperature)
-    a = b.to_atomic_displacements()
+    a, b = tosca_modes.ab(100)
 
     intensities = calculate_almost_isotropic_incoherent_fundamentals(
         mode_displacements=b, atomic_displacements=a, nominal_q2=tosca_modes.q2
@@ -34,10 +34,7 @@ def test_calculate_almost_isotropic_incoherent_combinations(
     from abinslib.util import calculate_indirect_q2
 
     modes = tosca_modes.modes
-
-    temperature = Quantity(100, "kelvin")
-    b = Displacements.from_modes(modes, temperature=temperature)
-    a = b.to_atomic_displacements()
+    a, b = tosca_modes.ab(100)
 
     combination_frequencies = (
         modes.frequencies[:, :, None, None] + modes.frequencies[None, None, :, :]
@@ -64,10 +61,7 @@ def test_calculate_almost_isotropic_incoherent_combinations(
 def test_calculate_almost_isotropic_incoherent_combinations_bad_q(tosca_modes):
 
     modes = tosca_modes.modes
-
-    temperature = Quantity(100, "kelvin")
-    b = Displacements.from_modes(modes, temperature=temperature)
-    a = b.to_atomic_displacements()
+    a, b = tosca_modes.ab(100)
 
     bad_q2 = np.ones_like(modes.frequencies)
 
@@ -91,13 +85,10 @@ def test_calculate_isotropic_incoherent_spectra(
     temperature_k, tosca_modes, ndarrays_regression
 ):
     """Test almost-isotropic fundamentals"""
-    modes, q2 = tosca_modes
+    modes, q2 = astuple(tosca_modes)
+    a, b = tosca_modes.ab(temperature_k)
 
-    temperature = Quantity(temperature_k, "K")
     bins = Quantity(np.arange(0, 8000, 1), "cm_1")
-
-    b = Displacements.from_modes(modes=modes, temperature=temperature)
-    a = b.to_atomic_displacements()
 
     spectra = calculate_almost_isotropic_incoherent_spectra(modes, b, a, q2, bins)
 
@@ -125,9 +116,9 @@ def test_calculate_almost_isotropic_incoherent_combination_spectra(
     """Test almost-isotropic fundamentals"""
     from abinslib.util import calculate_indirect_q2
 
-    modes, _ = tosca_modes
+    modes = tosca_modes.modes
+    a, b = tosca_modes.ab(temperature_k)
 
-    temperature = Quantity(temperature_k, "K")
     bins = Quantity(np.arange(0, 8000, 1), "cm_1")
 
     combination_frequencies = (
@@ -139,9 +130,6 @@ def test_calculate_almost_isotropic_incoherent_combination_spectra(
         angle=(134.98885653282196 * np.pi / 180),
         final_energy=Quantity(32.0, "cm_1").to("hartree"),
     )
-
-    b = Displacements.from_modes(modes=modes, temperature=temperature)
-    a = b.to_atomic_displacements()
 
     spectra = calculate_almost_isotropic_incoherent_combination_spectra(
         modes, b, a, q2, bins, apply_cross_section=apply_cross_section
@@ -162,19 +150,16 @@ def test_calculate_almost_isotropic_incoherent_combination_spectra_bad_weights(
     tosca_modes,
 ):
     """Test almost-isotropic fundamentals"""
-    modes, _ = tosca_modes
+    modes = deepcopy(tosca_modes.modes)
     modes.weights = np.ones_like(modes.weights)  # (i.e. sum > 1)
+    a, b = tosca_modes.ab(100)
 
-    temperature = Quantity(100, "K")
     bins = Quantity(np.arange(0, 8000, 1), "cm_1")
 
     q2 = Quantity(
         np.ones((*modes.frequencies.shape, *modes.frequencies.shape)),
         "bohr^-2",
     )
-
-    b = Displacements.from_modes(modes=modes, temperature=temperature)
-    a = b.to_atomic_displacements()
 
     with pytest.raises(ValueError, match="q-point weights sum to more than 1"):
         calculate_almost_isotropic_incoherent_combination_spectra(modes, b, a, q2, bins)
@@ -191,9 +176,9 @@ def test_q_scaling_almost_isotropic_incoherent_combination_spectra(
     """Test almost-isotropic fundamentals"""
     from abinslib.util import calculate_indirect_q2
 
-    modes, _ = tosca_modes
+    modes = tosca_modes.modes
+    a, b = tosca_modes.ab(temperature_k)
 
-    temperature = Quantity(temperature_k, "K")
     bins = Quantity(np.arange(0, 8000, 1), "cm_1")
 
     bin_centres = (bins[1:] + bins[:-1]) * 0.5
@@ -202,9 +187,6 @@ def test_q_scaling_almost_isotropic_incoherent_combination_spectra(
         angle=(134.98885653282196 * np.pi / 180),
         final_energy=Quantity(32.0, "cm_1").to("hartree"),
     )
-
-    b = Displacements.from_modes(modes=modes, temperature=temperature)
-    a = b.to_atomic_displacements()
 
     spectra = q_scaling_almost_isotropic_incoherent_combination_spectra(
         modes, b, a, q2, bins, apply_cross_section=apply_cross_section
@@ -231,9 +213,9 @@ def test_mantid_like_combination_spectra(
     """Test almost-isotropic fundamentals"""
     from abinslib.util import calculate_indirect_q2
 
-    modes, _ = tosca_modes
+    modes = tosca_modes.modes
+    a, b = tosca_modes.ab(temperature_k)
 
-    temperature = Quantity(temperature_k, "K")
     bins = Quantity(np.arange(0, 8000, 1), "cm_1")
 
     bin_centres = (bins[1:] + bins[:-1]) * 0.5
@@ -242,9 +224,6 @@ def test_mantid_like_combination_spectra(
         angle=(134.98885653282196 * np.pi / 180),
         final_energy=Quantity(32.0, "cm_1").to("hartree"),
     )
-
-    b = Displacements.from_modes(modes=modes, temperature=temperature)
-    a = b.to_atomic_displacements()
 
     spectra = mantid_like_combination_spectra(
         modes, b, a, q2, bins, apply_cross_section=apply_cross_section
