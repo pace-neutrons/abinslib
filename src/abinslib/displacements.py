@@ -44,27 +44,25 @@ class Displacements:
     data of a Displacements object, the data should be accessed by the "one",
     "n", "n_plus_one" and "two_n_plus_one" properties which provide
     displacements at corresponding Bose occupation values.
-
-    Parameters
-    ----------
-    displacements:
-      Atomic displacement tensor Quantity with dimensions
-      (qpts, modes, atoms, 3, 3) and units length^2, without Bose occupation
-      factor. (i.e. with the same values as the "one" property on resulting
-      object.)
-    weights:
-      Normalised q-point weights corresponding to axis 0 of mode_displacements
-    bose_n:
-      Bose factors <n> corresponding to displacements at target temperature.
-      Other occupations <1>, <n+1> and <2n+1> will be derived from these
-      values.
-
     """
 
     displacements: Quantity
+    """Atomic displacement tensor with dimensions (qpts, modes, atoms, 3, 3)
+    and units length^2, without Bose occupation factor.
+    (i.e. with the same values as the "one" property on resulting object.)
+    """
+
     weights: np.ndarray
+    """Normalised q-point weights corresponding to axis 0 of mode_displacements."""
+
     bose_n: np.ndarray
+    """Bose factors <n> corresponding to displacements at target temperature.
+
+    Other occupations <1>, <n+1> and <2n+1> will be derived from these values.
+    """
+
     temperature: Quantity
+    """Temperature for Bose occupation."""
 
     def __post_init__(self):
         """Make the underlying numpy array read-only so caching is safe."""

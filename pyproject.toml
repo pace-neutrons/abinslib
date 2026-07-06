@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "abinslib"
-dynamic = ["version"]
+version = "0.0.1"
 requires-python = ">=3.11"
 
 dependencies = [
@@ -19,6 +19,14 @@ test = [
     "pytest-cov~=7.0",
 ]
 lint = ["ruff==0.15.11"]
+doc = [
+    "sphinx~=9.0.0",
+    "furo==2025.12.19",
+    "sphinx-autoapi~=3.8.0",
+    "sphinx-gallery~=0.21.0",
+    "myst-parser~=5.1.0",
+    "matplotlib~=3.11.0",
+]
 dev = [
     {include-group = 'test'},
     {include-group = 'lint'},
@@ -34,9 +42,6 @@ source = ["src",
 
 [tool.coverage.run]
 source = ["src"]
-
-[tool.setuptools.dynamic]
-version = {attr = "abinslib.__version__"}
 
 [tool.setuptools.packages.find]
 where =  ["src"]
@@ -83,6 +88,7 @@ extend-ignore-names = [
 [tool.ruff.lint.per-file-ignores]
 # Ease docstring requirements for unit tests and workflows
 "tests/*" = ["D", "DOC"]
+"docs/source/tutorials/*" = ["D", "DOC"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

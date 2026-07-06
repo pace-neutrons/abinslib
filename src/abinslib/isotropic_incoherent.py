@@ -86,7 +86,7 @@ def calculate_isotropic_dw_factor(
         q2: scalar Q^2 array of arbitrary shape and length^-2 dimensions
 
     Returns:
-        Debye-Waller factor array with shape (natoms, *q2.shape)
+        Debye-Waller factor array with shape ``(natoms, *q2.shape)``
 
     """
     dw = atomic_displacements.to("bohr^2").magnitude
