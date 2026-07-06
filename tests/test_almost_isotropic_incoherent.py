@@ -26,6 +26,39 @@ def test_calculate_almost_isotropic_incoherent_fundamentals(
     ndarrays_regression.check({"intensities": intensities})
 
 
+@pytest.mark.parametrize("tosca_modes", ["GaSb"], indirect=True)
+def test_calculate_almost_isotropic_incoherent_combinations(
+    tosca_modes, ndarrays_regression
+):
+    from abinslib.util import calculate_indirect_q2
+
+    modes = tosca_modes.modes
+
+    temperature = Quantity(100, "kelvin")
+    b = Displacements.from_modes(modes, temperature=temperature)
+    a = b.to_atomic_displacements()
+
+    combination_frequencies = (
+        modes.frequencies[:, :, None, None] + modes.frequencies[None, None, :, :]
+    )
+
+    q2 = calculate_indirect_q2(
+        combination_frequencies,
+        angle=(134.98885653282196 * np.pi / 180),
+        final_energy=Quantity(32.0, "cm_1").to("hartree"),
+    )
+
+    intensities = calculate_almost_isotropic_incoherent_combinations(
+        mode_displacements=b, atomic_displacements=a, nominal_q2=q2
+    )
+    assert intensities.shape == (
+        *modes.frequencies.shape,
+        *modes.frequencies.shape,
+        modes.crystal.n_atoms,
+    )
+    ndarrays_regression.check({"intensities": intensities})
+
+
 @pytest.mark.parametrize(
     ("temperature_k", "tosca_modes"),
     [
@@ -58,27 +91,6 @@ def test_calculate_isotropic_incoherent_spectrum(
             "y_data_unit": spectra.y_data_unit,
         }
     )
-
-
-@pytest.mark.parametrize("modes", ["GaSb"], indirect=True)
-def test_almost_isotropic_incoherent_combinations(modes):
-    from abinslib.util import calculate_indirect_q2
-
-    combination_frequencies = (
-        modes.frequencies[:, :, None, None] + modes.frequencies[None, None, :, :]
-    )
-
-    q2 = calculate_indirect_q2(
-        combination_frequencies,
-        angle=(134.98885653282196 * np.pi / 180),
-        final_energy=Quantity(32.0, "cm_1").to("hartree"),
-    )
-
-    temperature = Quantity(100, "kelvin")
-    b = Displacements.from_modes(modes=modes, temperature=temperature)
-    a = b.to_atomic_displacements()
-
-    _ = calculate_almost_isotropic_incoherent_combinations(b, a, q2)
 
 
 @pytest.mark.parametrize("modes", ["GaSb"], indirect=True)
