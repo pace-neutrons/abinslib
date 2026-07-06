@@ -1,5 +1,6 @@
 [![Ruff][ruff-badge]][ruff-link]
 [![Run tests][ci-badge]][ci-link]
+[![Documentation][docs-badge]][docs-link]
 [![License][license-badge]][license-link]
 
 # abinslib
@@ -64,5 +65,7 @@ cross-section references.
 [ruff-link]: https://github.com/astral-sh/ruff
 [ci-badge]: https://github.com/pace-neutrons/abinslib/actions/workflows/test.yml/badge.svg
 [ci-link]: https://github.com/pace-neutrons/abinslib/actions/workflows/test.yml
+[docs-badge]: https://img.shields.io/badge/docs-online-00796B
+[docs-link]: https://pace-neutrons.github.io/abinslib/
 [license-badge]: https://img.shields.io/badge/License-GPLv3-blue.svg
 [license-link]: https://www.gnu.org/licenses/gpl-3.0
