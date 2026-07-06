@@ -3,6 +3,7 @@ import numpy as np
 import pytest
 
 from abinslib.almost_isotropic_incoherent import (
+    calculate_almost_isotropic_incoherent_combination_spectra,
     calculate_almost_isotropic_incoherent_combinations,
     calculate_almost_isotropic_incoherent_fundamentals,
     calculate_almost_isotropic_incoherent_spectra,
@@ -59,6 +60,23 @@ def test_calculate_almost_isotropic_incoherent_combinations(
     ndarrays_regression.check({"intensities": intensities})
 
 
+@pytest.mark.parametrize("tosca_modes", ["GaSb"], indirect=True)
+def test_calculate_almost_isotropic_incoherent_combinations_bad_q(tosca_modes):
+
+    modes = tosca_modes.modes
+
+    temperature = Quantity(100, "kelvin")
+    b = Displacements.from_modes(modes, temperature=temperature)
+    a = b.to_atomic_displacements()
+
+    bad_q2 = np.ones_like(modes.frequencies)
+
+    with pytest.raises(ValueError, match="Expected 4-D"):
+        calculate_almost_isotropic_incoherent_combinations(
+            mode_displacements=b, atomic_displacements=a, nominal_q2=bad_q2
+        )
+
+
 @pytest.mark.parametrize(
     ("temperature_k", "tosca_modes"),
     [
@@ -69,7 +87,7 @@ def test_calculate_almost_isotropic_incoherent_combinations(
     ],
     indirect=["tosca_modes"],
 )
-def test_calculate_isotropic_incoherent_spectrum(
+def test_calculate_isotropic_incoherent_spectra(
     temperature_k, tosca_modes, ndarrays_regression
 ):
     """Test almost-isotropic fundamentals"""
@@ -93,43 +111,150 @@ def test_calculate_isotropic_incoherent_spectrum(
     )
 
 
-@pytest.mark.parametrize("modes", ["GaSb"], indirect=True)
-def test_q_scaling_combination_spectra(modes):
+@pytest.mark.parametrize(
+    ("temperature_k", "tosca_modes", "apply_cross_section"),
+    [
+        (100, "ethanol", False),
+        (100, "ethanol", True),
+    ],
+    indirect=["tosca_modes"],
+)
+def test_calculate_almost_isotropic_incoherent_combination_spectra(
+    temperature_k, tosca_modes, apply_cross_section, ndarrays_regression
+):
+    """Test almost-isotropic fundamentals"""
     from abinslib.util import calculate_indirect_q2
 
+    modes, _ = tosca_modes
+
+    temperature = Quantity(temperature_k, "K")
     bins = Quantity(np.arange(0, 8000, 1), "cm_1")
+
+    combination_frequencies = (
+        modes.frequencies[:, :, None, None] + modes.frequencies[None, None, :, :]
+    )
+
+    q2 = calculate_indirect_q2(
+        combination_frequencies,
+        angle=(134.98885653282196 * np.pi / 180),
+        final_energy=Quantity(32.0, "cm_1").to("hartree"),
+    )
+
+    b = Displacements.from_modes(modes=modes, temperature=temperature)
+    a = b.to_atomic_displacements()
+
+    spectra = calculate_almost_isotropic_incoherent_combination_spectra(
+        modes, b, a, q2, bins, apply_cross_section=apply_cross_section
+    )
+
+    ndarrays_regression.check(
+        {
+            "x_data": spectra.x_data.magnitude,
+            "y_data": spectra.y_data.magnitude,
+            "x_data_unit": spectra.x_data_unit,
+            "y_data_unit": spectra.y_data_unit,
+        }
+    )
+
+
+@pytest.mark.parametrize("tosca_modes", ["ethanol"], indirect=["tosca_modes"])
+def test_calculate_almost_isotropic_incoherent_combination_spectra_bad_weights(
+    tosca_modes,
+):
+    """Test almost-isotropic fundamentals"""
+    modes, _ = tosca_modes
+    modes.weights = np.ones_like(modes.weights)  # (i.e. sum > 1)
+
+    temperature = Quantity(100, "K")
+    bins = Quantity(np.arange(0, 8000, 1), "cm_1")
+
+    q2 = Quantity(
+        np.ones((*modes.frequencies.shape, *modes.frequencies.shape)),
+        "bohr^-2",
+    )
+
+    b = Displacements.from_modes(modes=modes, temperature=temperature)
+    a = b.to_atomic_displacements()
+
+    with pytest.raises(ValueError, match="q-point weights sum to more than 1"):
+        calculate_almost_isotropic_incoherent_combination_spectra(modes, b, a, q2, bins)
+
+
+@pytest.mark.parametrize(
+    ("temperature_k", "tosca_modes", "apply_cross_section"),
+    [(100, "GaSb", False)],
+    indirect=["tosca_modes"],
+)
+def test_q_scaling_almost_isotropic_incoherent_combination_spectra(
+    temperature_k, tosca_modes, apply_cross_section, ndarrays_regression
+):
+    """Test almost-isotropic fundamentals"""
+    from abinslib.util import calculate_indirect_q2
+
+    modes, _ = tosca_modes
+
+    temperature = Quantity(temperature_k, "K")
+    bins = Quantity(np.arange(0, 8000, 1), "cm_1")
+
     bin_centres = (bins[1:] + bins[:-1]) * 0.5
-    nominal_q2 = calculate_indirect_q2(
+    q2 = calculate_indirect_q2(
         bin_centres,
         angle=(134.98885653282196 * np.pi / 180),
         final_energy=Quantity(32.0, "cm_1").to("hartree"),
     )
 
-    temperature = Quantity(100, "kelvin")
     b = Displacements.from_modes(modes=modes, temperature=temperature)
     a = b.to_atomic_displacements()
 
-    _ = q_scaling_almost_isotropic_incoherent_combination_spectra(
-        modes, b, a, nominal_q2, bins, apply_cross_section=True
+    spectra = q_scaling_almost_isotropic_incoherent_combination_spectra(
+        modes, b, a, q2, bins, apply_cross_section=apply_cross_section
+    )
+
+    ndarrays_regression.check(
+        {
+            "x_data": spectra.x_data.magnitude,
+            "y_data": spectra.y_data.magnitude,
+            "x_data_unit": spectra.x_data_unit,
+            "y_data_unit": spectra.y_data_unit,
+        }
     )
 
 
-@pytest.mark.parametrize("modes", ["GaSb"], indirect=True)
-def test_mantid_like_combination_spectra(modes):
+@pytest.mark.parametrize(
+    ("temperature_k", "tosca_modes", "apply_cross_section"),
+    [(100, "GaSb", False)],
+    indirect=["tosca_modes"],
+)
+def test_mantid_like_combination_spectra(
+    temperature_k, tosca_modes, apply_cross_section, ndarrays_regression
+):
+    """Test almost-isotropic fundamentals"""
     from abinslib.util import calculate_indirect_q2
 
+    modes, _ = tosca_modes
+
+    temperature = Quantity(temperature_k, "K")
     bins = Quantity(np.arange(0, 8000, 1), "cm_1")
+
     bin_centres = (bins[1:] + bins[:-1]) * 0.5
-    nominal_q2 = calculate_indirect_q2(
+    q2 = calculate_indirect_q2(
         bin_centres,
         angle=(134.98885653282196 * np.pi / 180),
         final_energy=Quantity(32.0, "cm_1").to("hartree"),
     )
 
-    temperature = Quantity(100, "kelvin")
     b = Displacements.from_modes(modes=modes, temperature=temperature)
     a = b.to_atomic_displacements()
 
-    _ = mantid_like_combination_spectra(
-        modes, b, a, nominal_q2, bins, apply_cross_section=True
+    spectra = mantid_like_combination_spectra(
+        modes, b, a, q2, bins, apply_cross_section=apply_cross_section
+    )
+
+    ndarrays_regression.check(
+        {
+            "x_data": spectra.x_data.magnitude,
+            "y_data": spectra.y_data.magnitude,
+            "x_data_unit": spectra.x_data_unit,
+            "y_data_unit": spectra.y_data_unit,
+        }
     )
