@@ -90,7 +90,6 @@ rule write_almost_isotropic_fundamentals_mantid:
     script:
         "scripts/write_mantid_fundamentals.py"
 
-
 rule write_isotropic_fundamentals:
     input:
         "data/{label}_qpoint_phonon_modes.json",
@@ -101,8 +100,6 @@ rule write_isotropic_fundamentals:
         "envs/abinslib.yml"
     script:
         "scripts/write_isotropic_fundamentals.py"
-
-
 
 rule write_almost_isotropic_fundamentals:
     input:

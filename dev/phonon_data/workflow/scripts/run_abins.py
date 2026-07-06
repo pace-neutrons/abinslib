@@ -1,3 +1,5 @@
+"""Write Mantid reference data."""
+
 from tempfile import TemporaryDirectory
 
 import mantid.simpleapi

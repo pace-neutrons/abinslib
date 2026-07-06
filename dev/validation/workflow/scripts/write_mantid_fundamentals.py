@@ -1,3 +1,5 @@
+"""Write fully-isotropic fundamental spectrum using Mantid."""
+
 from tempfile import TemporaryDirectory
 
 from euphonic import Quantity, Spectrum1D
