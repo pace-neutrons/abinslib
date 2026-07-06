@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from euphonic import Quantity, ureg
+from euphonic import QpointPhononModes, Quantity, ureg
 from euphonic.spectra import Spectrum1DCollection
 import numpy as np
 
@@ -14,9 +12,6 @@ from .isotropic_incoherent import (
     _get_total_cross_sections,
     calculate_isotropic_dw_factor,
 )
-
-if TYPE_CHECKING:
-    from euphonic import QpointPhononModes
 
 
 def calculate_almost_isotropic_incoherent_fundamentals(
@@ -228,72 +223,6 @@ def calculate_almost_isotropic_incoherent_combination_spectra(
     return Spectrum1DCollection(x_data=bins, y_data=y_data, metadata=metadata)
 
 
-def mantid_like_combination_spectra(
-    modes: QpointPhononModes,
-    mode_displacements: Displacements,
-    atomic_displacements: Quantity,
-    nominal_q2: Quantity,
-    bins: Quantity,
-    apply_cross_section: bool = True,
-) -> Spectrum1DCollection:
-    """Calculate two-phonon intensities with approximations from Abins-Mantid
-
-    Currently the emphasis is on reproducibility, not efficiency, so things like
-    Debye-Waller factor are calculated more times than necessary.
-
-    - DOS-like almost-isotropic incoherent approximation (i.e. semi-analytic
-      powder-averaging equations with traces and contractions)
-    - Calculate at nominal Q=1, rescale for Q4 relation and apply Debye-Waller
-      _after_ binning
-    - Treat each input q-point independently:
-      - only consider combination modes at each q
-      - weight each of these spectra with the weight of corresponding q
-
-    - DW factor *is* still correctly averaged over q-point contributions
-
-    """
-    from euphonic import QpointPhononModes
-
-    from .displacements import Displacements
-
-    spectra = Spectrum1DCollection(
-        bins, np.empty((0, len(bins))) * ureg("barn") / bins.units
-    )
-
-    for q_index, weight in enumerate(modes.weights):
-        qpt_modes = QpointPhononModes(
-            crystal=modes.crystal,
-            qpts=modes.qpts[np.newaxis, q_index],
-            frequencies=modes.frequencies[np.newaxis, q_index],
-            eigenvectors=modes.eigenvectors[np.newaxis, q_index],
-            weights=np.array([1.0]),
-        )
-        qpt_displacements = Displacements(
-            displacements=mode_displacements.displacements[np.newaxis, q_index],
-            weights=np.array([1.0]),
-            bose_n=mode_displacements.bose_n[np.newaxis, q_index],
-            temperature=mode_displacements.temperature,
-        )
-
-        qpt_spectra = q_scaling_almost_isotropic_incoherent_combination_spectra(
-            modes=qpt_modes,
-            mode_displacements=qpt_displacements,
-            atomic_displacements=atomic_displacements,  # unused outside DW
-            nominal_q2=nominal_q2,
-            bins=bins,
-            apply_cross_section=apply_cross_section,
-        )
-
-        qpt_spectra.y_data = qpt_spectra.y_data * weight
-        qpt_spectra.metadata["qpt"] = str(modes.qpts[q_index])
-
-        spectra = spectra + qpt_spectra
-
-    spectra.group_by("atom_index")  # Combine q-point contributions
-
-    return spectra
-
-
 def q_scaling_almost_isotropic_incoherent_combination_spectra(
     modes: QpointPhononModes,
     mode_displacements: Displacements,
@@ -351,6 +280,77 @@ def q_scaling_almost_isotropic_incoherent_combination_spectra(
         q2=nominal_q2,
     )
     spectra.y_data = spectra.y_data * q4_scale * np.swapaxes(dw, -1, -2)[0]
+
+    return spectra
+
+
+def mantid_like_combination_spectra(
+    modes: QpointPhononModes,
+    mode_displacements: Displacements,
+    atomic_displacements: Quantity,
+    nominal_q2: Quantity,
+    bins: Quantity,
+    apply_cross_section: bool = True,
+) -> Spectrum1DCollection:
+    """Calculate two-phonon intensities with approximations from Abins-Mantid
+
+    Currently the emphasis is on reproducibility, not efficiency.
+
+    - DOS-like almost-isotropic incoherent approximation (i.e. semi-analytic
+      powder-averaging equations with traces and contractions)
+    - Calculate at nominal Q=1, rescale for Q4 relation and apply Debye-Waller
+      _after_ binning
+    - Treat each input q-point independently:
+      - only consider combination modes at each q
+      - weight each of these spectra with the weight of corresponding q
+    - Order-2 scale factor is 1/60 for overtones and 1/30 for combinations
+
+    - DW factor *is* still correctly averaged over q-point contributions
+
+    """
+    spectra = Spectrum1DCollection(
+        bins, np.empty((0, len(bins))) * ureg("barn") / bins.units
+    )
+
+    for q_index, weight in enumerate(modes.weights):
+        qpt_modes = QpointPhononModes(
+            crystal=modes.crystal,
+            qpts=modes.qpts[np.newaxis, q_index],
+            frequencies=modes.frequencies[np.newaxis, q_index],
+            eigenvectors=modes.eigenvectors[np.newaxis, q_index],
+            weights=np.array([1.0]),
+        )
+        qpt_displacements = Displacements(
+            displacements=mode_displacements.displacements[np.newaxis, q_index],
+            weights=np.array([1.0]),
+            bose_n=mode_displacements.bose_n[np.newaxis, q_index],
+            temperature=mode_displacements.temperature,
+        )
+
+        qpt_spectra = q_scaling_almost_isotropic_incoherent_combination_spectra(
+            modes=qpt_modes,
+            mode_displacements=qpt_displacements,
+            atomic_displacements=atomic_displacements,  # unused outside DW
+            nominal_q2=nominal_q2,
+            bins=bins,
+            apply_cross_section=apply_cross_section,
+        )
+
+        # Apply a couple of quirks from Mantid-Abins implementation:
+        #
+        # Exact origins/implications are being investigated, but these are
+        # needed to reproduce established Mantid-Abins results (which agree
+        # with expt well enough...)
+        #
+        # - Re-weight for current q-point (instead of product of weights)
+        # - Apply 1/n! weighting on top of 1/15C mode weighting
+
+        qpt_spectra.y_data = qpt_spectra.y_data * weight * 0.5
+        qpt_spectra.metadata["qpt"] = str(modes.qpts[q_index])
+
+        spectra = spectra + qpt_spectra
+
+    spectra.group_by("atom_index")  # Combine q-point contributions
 
     return spectra
 
