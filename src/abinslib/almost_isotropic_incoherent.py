@@ -1,4 +1,4 @@
-"""Semi-analytic powder averaging approximations in CLIMAX/AbINS lineage"""
+"""Semi-analytic powder averaging approximations in CLIMAX/AbINS lineage."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ def calculate_almost_isotropic_incoherent_fundamentals(
     atomic_displacements: Quantity,
     nominal_q2: Quantity,
 ) -> np.ndarray:
-    """Calculate fundamental mode intensities in almost-isotropic approximation
+    """Calculate fundamental mode intensities in almost-isotropic approximation.
 
     S =  exp(-(Q^2 tr(A + 2 tr(A:B)/tr(B))/5)) Q^2 tr(B) / 3
 
@@ -28,6 +28,15 @@ def calculate_almost_isotropic_incoherent_fundamentals(
     - Ignore actual q-points and use nominal Q^2 instead
 
     Return array indices (qpt, mode, atom)
+
+    Args:
+        mode_displacements: phonon mode displacement dataset
+        atomic_displacements: thermal average atomic displacements indexed
+            (atom, direction, direction)
+        nominal_q2:
+            Scalar Q^2 values corresponding to modes; note that all q-points
+            are used and this is typically related to the mode frequency by
+            neutron instrument parameters.
 
     """
     q2_term = (
@@ -65,7 +74,7 @@ def calculate_almost_isotropic_incoherent_combinations(
     nominal_q2: Quantity,
     include_dw: bool = False,
 ) -> np.ndarray:
-    """Calculate second-order mode intensities in almost-isotropic approximation
+    """Calculate second-order mode intensities in almost-isotropic approximation.
 
     S(Q, ω_ν + ω_ν') =
         exp(-Q^2 tr(A/3)) Q^4 / 15C (tr(B_ν)tr(B_ν') + B_ν:B_ν' + B_ν':B_ν)
@@ -75,8 +84,6 @@ def calculate_almost_isotropic_incoherent_combinations(
     - Atomic cross sections not applied
     - Ignore actual q-points and use nominal Q^2 instead
 
-    Return array indices (qpt1, mode1, qpt2, mode2, atom)
-
     Note that this has cubic scaling with system size as n_modes ∝ n_atoms;
     while this reference implementation constructs the whole array,
     memory-efficient approaches need to reduce the data to binned spectra
@@ -84,16 +91,22 @@ def calculate_almost_isotropic_incoherent_combinations(
 
     It is also possible to reduce the calculation effort by calculating at
     constant Q and rescaling the intensity based on post-binning Q values;
-    this will be implemented as a separate function.
+    this is implemented in
+    :func:`q_scaling_almost_isotropic_incoherent_combination_spectra`
 
     Args:
-        mode_displacements: fundamental phonon displacements arranged by (q, band, atom)
-        atomic_displacements: thermal average displacement by atom
+        mode_displacements: phonon mode displacement dataset
+        atomic_displacements: thermal average atomic displacements indexed
+            (atom, direction, direction)
         nominal_q2:
-            Q^2 values for each combination of two fundamental modes,
-            indexed by (q, band, q, band)
+            Scalar Q^2 values corresponding to modes; note that all q-points
+            are used and this is typically related to the mode frequency by
+            neutron instrument parameters.
         include_dw:
             Include mode-by-mode Debye-Waller intensity scaling
+
+    Returns:
+        Intensities with array indices (qpt1, mode1, qpt2, mode2, atom)
 
     """
     if len(nominal_q2.shape) != 4:
@@ -143,13 +156,32 @@ def calculate_almost_isotropic_incoherent_spectra(
     bins: Quantity,
     apply_cross_section: bool = True,
 ) -> Spectrum1DCollection:
-    """Calculate INS intensities in almost-isotropic incoherent approximation
+    """Calculate INS intensities in almost-isotropic incoherent approximation.
 
     Actual q-points of phonon modes will be disregarded; instead each mode
     intensity will be based on a separate array of nominal Q^2 values
     corresponding to modes. This is intended to approximate powder-averaging
     with kinematic constraints: for indirect geometry the energy-Q^2
     relationship can be determined using abinslib.utils.calculate_indirect_q2.
+
+    Args:
+        modes: phonon frequency and eigenvector dataset
+        mode_displacements: phonon mode displacement dataset
+            (This can be obtained using :func:`Displacements.from_modes(modes)`.)
+        atomic_displacements: thermal average atomic displacements indexed
+            (atom, direction, direction)
+        nominal_q2:
+            Scalar Q^2 values corresponding to modes; note that all q-points
+            are used and this is typically related to the mode frequency by
+            neutron instrument parameters.
+        bins:
+            Energy or frequency bins used as x_data in resulting spectra
+        apply_cross_section:
+            Multiply each atom/isotope spectrum by a corresponding total
+            neutron scattering cross-section (σ_tot).
+
+    Returns:
+        binned spectra of contribution from each nucleus
 
     """
     intensities = calculate_almost_isotropic_incoherent_fundamentals(
@@ -183,7 +215,7 @@ def calculate_almost_isotropic_incoherent_combination_spectra(
     bins: Quantity,
     apply_cross_section: bool = True,
 ) -> Spectrum1DCollection:
-    """Calculate two-phonon intensities in almost-isotropic incoherent approximation
+    """Calculate two-phonon intensities in almost-isotropic incoherent approximation.
 
     Actual q-points of phonon modes will be disregarded; instead each mode
     intensity will be based on a separate array of nominal Q^2 values
@@ -193,9 +225,24 @@ def calculate_almost_isotropic_incoherent_combination_spectra(
 
     These should be determined for each two-phonon combination
 
-    nominal_q2:
-        Q^2 values for each combination of two fundamental modes,
-        indexed by (q, band, q, band)
+    Args:
+        modes: phonon frequency and eigenvector dataset
+        mode_displacements: phonon mode displacement dataset
+            (This can be obtained using :func:`Displacements.from_modes(modes)`.)
+        atomic_displacements: thermal average atomic displacements indexed
+            (atom, direction, direction)
+        nominal_q2:
+            Scalar Q^2 values for each combination of two fundamental modes, indexed by
+            (q, band, q, band).  This is typically related to the combination mode
+            frequency by neutron instrument parameters.
+        bins:
+            Energy or frequency bins used as x_data in resulting spectra
+        apply_cross_section:
+            Multiply each atom/isotope spectrum by a corresponding total
+            neutron scattering cross-section (σ_tot).
+
+    Returns:
+        binned spectra of contribution from each nucleus
 
     """
     intensities = calculate_almost_isotropic_incoherent_combinations(
@@ -231,7 +278,7 @@ def q_scaling_almost_isotropic_incoherent_combination_spectra(
     bins: Quantity,
     apply_cross_section: bool = True,
 ) -> Spectrum1DCollection:
-    """Calculate two-phonon intensities in almost-isotropic incoherent approximation
+    """Calculate two-phonon intensities in almost-isotropic incoherent approximation.
 
     Actual q-points of phonon modes will be disregarded; instead each mode
     intensity will be based on a separate array of nominal Q^2 values
@@ -243,9 +290,24 @@ def q_scaling_almost_isotropic_incoherent_combination_spectra(
     computational optimisation here as we still multiply a large Q2 array, but
     it imitates the Mantid implementation.)
 
-    nominal_q2:
-        Q^2 values corresponding to bin centres: for indirect geometry the energy-Q^2
-       relationship can be determined using abinslib.utils.calculate_indirect_q2.
+    Args:
+        modes: phonon frequency and eigenvector dataset
+        mode_displacements: phonon mode displacement dataset
+            (This can be obtained using :func:`Displacements.from_modes(modes)`.)
+        atomic_displacements: thermal average atomic displacements indexed
+            (atom, direction, direction)
+        nominal_q2:
+            Scalar Q^2 values corresponding to bin centres. For indirect geometry the
+           energy-Q^2 relationship can be determined using
+           abinslib.utils.calculate_indirect_q2.
+        bins:
+            Energy or frequency bins used as x_data in resulting spectra
+        apply_cross_section:
+            Multiply each atom/isotope spectrum by a corresponding total
+            neutron scattering cross-section (σ_tot).
+
+    Returns:
+        binned spectra of contribution from each nucleus
 
     """
     intensities = calculate_almost_isotropic_incoherent_combinations(
@@ -292,7 +354,7 @@ def mantid_like_combination_spectra(
     bins: Quantity,
     apply_cross_section: bool = True,
 ) -> Spectrum1DCollection:
-    """Calculate two-phonon intensities with approximations from Abins-Mantid
+    """Calculate two-phonon intensities with approximations from Abins-Mantid.
 
     Currently the emphasis is on reproducibility, not efficiency.
 
@@ -306,6 +368,25 @@ def mantid_like_combination_spectra(
     - Order-2 scale factor is 1/60 for overtones and 1/30 for combinations
 
     - DW factor *is* still correctly averaged over q-point contributions
+
+    Args:
+        modes: phonon frequency and eigenvector dataset
+        mode_displacements: phonon mode displacement dataset
+            (This can be obtained using :func:`Displacements.from_modes(modes)`.)
+        atomic_displacements: thermal average atomic displacements indexed
+            (atom, direction, direction)
+        nominal_q2:
+            Scalar Q^2 values corresponding to bin centres. For indirect geometry the
+           energy-Q^2 relationship can be determined using
+           abinslib.utils.calculate_indirect_q2.
+        bins:
+            Energy or frequency bins used as x_data in resulting spectra
+        apply_cross_section:
+            Multiply each atom/isotope spectrum by a corresponding total
+            neutron scattering cross-section (σ_tot).
+
+    Returns:
+        binned spectra of contribution from each nucleus
 
     """
     spectra = Spectrum1DCollection(
@@ -330,7 +411,7 @@ def mantid_like_combination_spectra(
         qpt_spectra = q_scaling_almost_isotropic_incoherent_combination_spectra(
             modes=qpt_modes,
             mode_displacements=qpt_displacements,
-            atomic_displacements=atomic_displacements,  # unused outside DW
+            atomic_displacements=atomic_displacements,
             nominal_q2=nominal_q2,
             bins=bins,
             apply_cross_section=apply_cross_section,
@@ -361,7 +442,7 @@ def _bin_combination_modes(
     bins: Quantity,
     apply_cross_section: bool = True,
 ) -> Quantity:
-    """Bin intensities corresponding to QpointPhononModes to 1D spectra
+    """Bin intensities corresponding to QpointPhononModes to 1D spectra.
 
     This version is intended for the 2-phonon combination modes, so intensities
     has shape (q, band, q, band). Each contribution is weighted by the product
