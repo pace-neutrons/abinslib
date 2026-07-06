@@ -1,10 +1,17 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
-from typing import NamedTuple
+from typing import TYPE_CHECKING
 
 from euphonic import QpointPhononModes, Quantity
 import numpy as np
 from numpy.random import PCG64, Generator
 import pytest
+
+if TYPE_CHECKING:
+    from abinslib.displacements import Displacements
 
 test_data = Path(__file__).parent / "data"
 
@@ -31,9 +38,27 @@ def original_datadir(request) -> Path:
     return _regression_data(request)
 
 
-class ToscaModes(NamedTuple):
+@dataclass
+class ToscaModes:
     modes: QpointPhononModes
     q2: Quantity
+
+    def __post_init__(self) -> None:
+        # lru_cache set up at instance level so it can be cleaned up properly
+        self.b = lru_cache()(self._b)
+        self.a = lru_cache()(self._a)
+
+    def _b(self, temperature_k: int) -> Displacements:
+        from abinslib.displacements import Displacements
+
+        temperature = Quantity(temperature_k, "kelvin")
+        return Displacements.from_modes(self.modes, temperature)
+
+    def _a(self, temperature_k: int) -> Quantity:
+        return self.b(temperature_k).to_atomic_displacements()
+
+    def ab(self, temperature_k: int) -> tuple[Quantity, Displacements]:
+        return self.a(temperature_k), self.b(temperature_k)
 
 
 def _get_modes(name: str) -> QpointPhononModes:

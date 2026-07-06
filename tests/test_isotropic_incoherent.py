@@ -1,3 +1,4 @@
+from dataclasses import astuple
 from pathlib import Path
 
 from euphonic import Crystal, Quantity
@@ -78,7 +79,7 @@ def test_calculate_isotropic_incoherent_spectrum(
     implementation applies DW and Q2 scaling after initial energy binning
     """
     temperature = Quantity(temperature_k, "K")
-    modes, q2 = tosca_modes
+    modes, q2 = astuple(tosca_modes)
 
     bins = Quantity(ref_npz["energy"], str(ref_npz["energy_unit"]))
     bin_width = bins[1] - bins[0]
@@ -112,13 +113,11 @@ def test_calculate_isotropic_incoherent_spectrum_no_cross_section(
     tosca_modes, ndarrays_regression
 ):
     """Regression test for isotropic spectrum binning without cross sections"""
-    temperature = Quantity(100.0, "K")
-    modes, q2 = tosca_modes
+    temperature_k = 100
+    modes, q2 = astuple(tosca_modes)
+    a, b = tosca_modes.ab(temperature_k)
 
     bins = Quantity(np.linspace(0, 1000, 400), "cm_1")
-
-    b = Displacements.from_modes(modes=modes, temperature=temperature)
-    a = b.to_atomic_displacements()
 
     spectra = calculate_isotropic_incoherent_spectra(
         modes, b, a, q2, bins, apply_cross_section=False, include_dw=True
@@ -134,18 +133,18 @@ def test_calculate_isotropic_incoherent_spectrum_no_cross_section(
 
 
 @pytest.mark.parametrize(
-    ("temperature_k", "modes", "ref_npz"),
+    ("temperature_k", "tosca_modes", "ref_npz"),
     [
         (10, "GaSb", "GaSb_abins_10k_isotropic_raw.npz"),
         (100, "GaSb", "GaSb_abins_100k_isotropic_raw.npz"),
         (10, "ethanol", "ethanol_abins_10k_isotropic_raw.npz"),
         (100, "ethanol", "ethanol_abins_100k_isotropic_raw.npz"),
     ],
-    indirect=("modes", "ref_npz"),
+    indirect=("tosca_modes", "ref_npz"),
 )
 def test_q_scaling_isotropic_incoherent_spectrum(
     temperature_k,
-    modes,
+    tosca_modes,
     ref_npz,
     patch_cross_sections,
     ndarrays_regression,
@@ -157,16 +156,14 @@ def test_q_scaling_isotropic_incoherent_spectrum(
     The difference with Mantid-Abins reference is smaller than exact
     calculation, if still larger than expected
     """
-
-    temperature = Quantity(temperature_k, "K")
-
     bins = Quantity(ref_npz["energy"], str(ref_npz["energy_unit"]))
     bin_width = bins[1] - bins[0]
 
     ref_intensity = ref_npz["intensity"]
 
-    b = Displacements.from_modes(modes=modes, temperature=temperature)
-    a = b.to_atomic_displacements()
+    modes = tosca_modes.modes
+    a, b = tosca_modes.ab(temperature_k)
+
     q2 = Quantity(np.load(test_data / "abins-q2-1_4-dump.npy"), "Å^-2")
 
     spectra = q_scaling_isotropic_incoherent_spectra(modes, b, a, q2, bins)
