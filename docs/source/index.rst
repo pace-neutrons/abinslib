@@ -22,3 +22,4 @@ used by Euphonic.
    :caption: Contents:
 
    auto_examples/index
+   autoapi/index

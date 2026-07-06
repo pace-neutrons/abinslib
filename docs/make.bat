@@ -4,6 +4,11 @@ pushd %~dp0
 
 REM Command file for Sphinx documentation
 
+REM Strict clean-ish build by default
+if "%SPHINXOPTS%" == "" (
+    set SPHINXOPTS=-W -E
+)
+
 if "%SPHINXBUILD%" == "" (
 	set SPHINXBUILD=sphinx-build
 )

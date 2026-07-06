@@ -26,7 +26,7 @@ extensions = [
 ]
 
 templates_path = ["_templates"]
-exclude_patterns = []
+exclude_patterns = ["tutorials/GALLERY_HEADER.rst"]
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
@@ -39,13 +39,14 @@ html_css_files = ["custom.css"]
 autoapi_type = "python"
 autoapi_dirs = ["../../src"]
 autoapi_keep_files = False  # Set true for debugging
+# autoapi_add_toctree_entry = False
 autoapi_options = [
     "members",
     "undoc-members",
     "show-inheritance",
     "show-module-summary",
     "imported-members",
-    ]
+]
 
 autodoc_typehints = "signature"
 
@@ -53,7 +54,7 @@ autodoc_typehints = "signature"
 sphinx_gallery_conf = {
     "examples_dirs": "tutorials",
     "gallery_dirs": "auto_examples",
-    }
+}
 
 # -- Napoleon options --------------------------------------------------------
 napoleon_google_docstring = True
@@ -65,4 +66,3 @@ napoleon_include_special_with_doc = True
 
 napoleon_use_param = True
 napoleon_use_rtype = True
-
