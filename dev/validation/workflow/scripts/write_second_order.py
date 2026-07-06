@@ -17,10 +17,6 @@ bins = mantid_data.get_bin_edges(restrict_range=False)
 displacements = Displacements.from_modes(modes, temperature=temperature)
 dw = displacements.to_atomic_displacements()
 
-# combination_frequencies = (
-#     modes.frequencies[:, :, None, None] + modes.frequencies[None, None, :, :]
-# )
-
 q2 = calculate_indirect_q2(
     mantid_data.get_bin_centres(),
     angle=(134.98885653282196 * np.pi / 180),
@@ -28,6 +24,6 @@ q2 = calculate_indirect_q2(
 )
 
 spectra = mantid_like_combination_spectra(modes, displacements, dw, q2, bins)
-spectrum = spectra.sum() * 0.5  # MAGIC FUDGE FACTOR
+spectrum = spectra.sum()
 
 spectrum.to_json_file(snakemake.output[0])
