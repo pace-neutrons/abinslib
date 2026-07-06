@@ -81,8 +81,8 @@ extend-ignore-names = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-# Initially enforce google-style docstrings just in this file
-"!src/abinslib/almost_isotropic_incoherent.py" = ["D", "DOC", "D417"]
+# Ease docstring requirements for unit tests
+"tests/*" = ["D", "DOC"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
