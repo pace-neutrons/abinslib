@@ -1,3 +1,5 @@
+"""Convert .castep_bin force constants to Euphonic JSON."""
+
 from euphonic import QpointPhononModes
 from snakemake.script import snakemake
 

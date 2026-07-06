@@ -1,3 +1,5 @@
+"""Plot comparison between Mantid and abinslib calculations."""
+
 from euphonic import Quantity, Spectrum1D
 from euphonic.plot import plot_1d_to_axis
 import matplotlib.pyplot as plt

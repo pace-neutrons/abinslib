@@ -1,3 +1,5 @@
+"""Convert phonopy yaml to Euphonic JSON."""
+
 from pathlib import Path
 
 from euphonic import ForceConstants

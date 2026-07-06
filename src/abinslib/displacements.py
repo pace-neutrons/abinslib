@@ -1,4 +1,4 @@
-"""Functions for calculation of atomic displacement tensors
+"""Functions for calculation of atomic displacement tensors.
 
 The phonon mode displacements are described by 3x3 matrices related to the
 covariance matrices of atomic positions associated with each mode. In the
@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class Displacements:
-    """Phonon mode displacement dataset
+    """Phonon mode displacement dataset.
 
     This represents atomic displacements as 3x3 tensors, often denoted U or B.
     The data is arranged by qpoint, phonon mode and atom.
@@ -67,7 +67,7 @@ class Displacements:
     temperature: Quantity
 
     def __post_init__(self):
-        """Make the underlying numpy array read-only so caching is safe"""
+        """Make the underlying numpy array read-only so caching is safe."""
         self.displacements.setflags(write=False)
 
     @classmethod
@@ -77,6 +77,21 @@ class Displacements:
         temperature: Quantity,
         frequency_min: Quantity = Quantity(10, "cm_1"),
     ) -> Self:
+        """Instantiate new Displacements from a QpointPhononModes.
+
+        Bose occupation factors are calculated as <n> and stored along with
+        unscaled displacements; the appropriate Bose scaling is applied later
+        depending on the method used for retrieval.
+
+        Args:
+            modes: phonon mode data
+            temperature: determines Bose factors and displacement magnitude
+            frequency_min: frequency threshold below which mode displacements
+                are set to zero. This is intended to eliminate translational
+                modes at the Gamma point; for precise calculations on a fine
+                q-point mesh it may be appropriate to reduce this threshold.
+
+        """
         bose_factor = calculate_bose_factor(
             modes.frequencies,
             temperature,
@@ -96,22 +111,26 @@ class Displacements:
 
     @cached_property
     def one(self) -> Quantity:
+        """Displacements without Bose occupation scaling."""
         return self.displacements
 
     @cached_property
     def n(self) -> Quantity:
+        """Displacements with <n> Bose occupation scaling."""
         return np.einsum("ij,ij...->ij...", self.bose_n, self.displacements)
 
     @cached_property
     def n_plus_one(self) -> Quantity:
+        """Displacements with <n+1> Bose occupation scaling."""
         return np.einsum("ij,ij...->ij...", self.bose_n + 1.0, self.displacements)
 
     @cached_property
     def two_n_plus_one(self) -> Quantity:
+        """Displacements with <2n+1> Bose occupation scaling."""
         return np.einsum("ij,ij...->ij...", 2.0 * self.bose_n + 1.0, self.displacements)
 
     def to_atomic_displacements(self) -> Quantity:
-        """Calculate atomic displacement tensor (A) for each atom
+        """Calculate atomic displacement tensor (A) for each atom.
 
         This is given in the same scaling convention as the "debye_waller"
         attribute of the DebyeWaller class in Euphonic, and may be used to
@@ -129,9 +148,7 @@ class Displacements:
         In both cases W_k is related to the displacement tensor of a given atom
         summed over all phonon modes.
 
-        Returns
-        -------
-        Quantity
+        Returns:
           Array with length^2 dimensions,
           indices (atom_index, direction, direction)
 
@@ -152,11 +169,9 @@ def _calculate_mode_displacements(
     temperature: Quantity,
     frequency_min: Quantity = Quantity(10, "cm_1"),
 ) -> Quantity:
-    """Get the 3x3 displacement tensor (B) for each atom and phonon mode
+    """Get the 3x3 displacement tensor (B) for each atom and phonon mode.
 
-    Returns
-    -------
-    Quantity:
+    Returns:
       Displacement array with length^2 dimensions and array indices: (qpt,
       mode, atom, direction, direction)
 

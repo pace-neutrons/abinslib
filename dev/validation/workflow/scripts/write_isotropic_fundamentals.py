@@ -1,3 +1,5 @@
+"""Write fully-isotropic fundamental spectrum using abinslib."""
+
 from euphonic import QpointPhononModes, Quantity, Spectrum1D
 import numpy as np
 from snakemake.script import snakemake

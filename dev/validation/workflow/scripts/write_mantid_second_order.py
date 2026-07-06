@@ -1,3 +1,5 @@
+"""Write almost-isotropic second-order spectrum using Mantid."""
+
 from tempfile import TemporaryDirectory
 
 from euphonic import Quantity, Spectrum1D

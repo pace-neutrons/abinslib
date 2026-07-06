@@ -1,3 +1,5 @@
+"""Compute optimised ethanol structure with PET-MAD."""
+
 from pathlib import Path
 
 from ase import Atoms
@@ -8,6 +10,7 @@ from upet.calculator import UPETCalculator
 
 
 def opt_ethanol(calc: UPETCalculator, traj: Path) -> Atoms:
+    """Get initial structure from ASE and optimize with Calculator."""
     # Make periodic cell for consistent phonon approach later
     atoms = ase.build.molecule("CH3CH2OH", vacuum=6.0, pbc=True)
     atoms.calc = calc
@@ -21,7 +24,7 @@ def opt_ethanol(calc: UPETCalculator, traj: Path) -> Atoms:
     return atoms
 
 
-def main():
+def main():  # noqa: D103
     calculator = UPETCalculator(**snakemake.params.calc_params)
 
     atoms = opt_ethanol(calculator, traj=Path(snakemake.output[0]))

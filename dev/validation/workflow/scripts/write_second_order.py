@@ -1,3 +1,5 @@
+"""Write mantid-like second-order data from abinslib implementation."""
+
 from euphonic import QpointPhononModes, Quantity, Spectrum1D
 import numpy as np
 from snakemake.script import snakemake

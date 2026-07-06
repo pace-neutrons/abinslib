@@ -1,3 +1,5 @@
+"""Utility functions, not specific to one calculation type."""
+
 from euphonic import Quantity
 import numpy as np
 
@@ -5,7 +7,7 @@ import numpy as np
 def calculate_indirect_q2(
     energy_transfer: Quantity, angle: float, final_energy: Quantity
 ) -> Quantity:
-    """Calculate Q^2 value for given energy transfer in indirect geometry
+    """Calculate Q^2 value for given energy transfer in indirect geometry.
 
     By the cosine law Q^2 = k_f^2 + k_i^2 - 2 k_f k_i cos(theta)
 
@@ -16,6 +18,9 @@ def calculate_indirect_q2(
         angle: scattering angle in radians
 
         final_energy: energy of detected neutrons (i.e. after monochromator)
+
+    Returns:
+        array of scalar Q^2 corresponding to input energy_transfer
 
     """
     # Get rid of ambiguous cm-1 units before manipulating energies

@@ -1,3 +1,5 @@
+"""Incoherent phonon mode intensities in the fully-isotropic approximation."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -39,7 +41,7 @@ def calculate_isotropic_incoherent_fundamentals(
     nominal_q2: Quantity,
     include_dw: bool = True,
 ) -> np.ndarray:
-    """Calculate mode intensities in fully-isotropic approximation
+    """Calculate mode intensities in fully-isotropic approximation.
 
     S = exp(-(Q^2 tr(A)/3)) Q^2 tr(B) / 3
 
@@ -71,6 +73,22 @@ def calculate_isotropic_dw_factor(
     atomic_displacements: Quantity,
     q2: Quantity,
 ) -> np.ndarray:
+    """Calculate fully-isotropic Debye-Waller factor.
+
+    The dot product between atomic displacements and Q vector is replaced with
+    a scalar product between Q and tr(A)/3.
+
+    Args:
+        atomic_displacements: displacement tensors with shape (natoms, 3, 3),
+            corresponding to sum over phonon modes with <2n+1> Bose statistics.
+            Generally this is obtained using
+            :func:`abinslib.displacements.Displacements.to_atomic_displacements()`
+        q2: scalar Q^2 array of arbitrary shape and length^-2 dimensions
+
+    Returns:
+        Debye-Waller factor array with shape (natoms, *q2.shape)
+
+    """
     dw = atomic_displacements.to("bohr^2").magnitude
 
     return np.exp(
@@ -87,7 +105,7 @@ def _bin_mode_intensities(
     bins: Quantity,
     apply_cross_section: bool = True,
 ) -> Quantity:
-    """Bin intensities corresponding to QpointPhononModes to 1D spectra
+    """Bin intensities corresponding to QpointPhononModes to 1D spectra.
 
     Sum over q-point and mode indices, using q-point weights from modes
 
@@ -134,7 +152,7 @@ def calculate_isotropic_incoherent_spectra(
     apply_cross_section: bool = True,
     include_dw: bool = True,
 ) -> Spectrum1DCollection:
-    """Calculate INS intensities in fully-isotropic incoherent approximation
+    """Calculate INS intensities in fully-isotropic incoherent approximation.
 
     Actual q-points of phonon modes will be disregarded; instead each mode
     intensity will be based on a separate array of nominal Q^2 values
@@ -142,8 +160,28 @@ def calculate_isotropic_incoherent_spectra(
     with kinematic constraints: for indirect geometry the energy-Q^2
     relationship can be determined using abinslib.utils.calculate_indirect_q2.
 
-    """
+    Args:
+        modes: phonon frequency and eigenvector dataset
+        mode_displacements: phonon mode displacement dataset
+            (This can be obtained using :func:`Displacements.from_modes(modes)`.)
+        atomic_displacements: thermal average atomic displacements indexed
+            (atom, direction, direction)
+        nominal_q2:
+            Scalar Q^2 values corresponding to modes; note that all q-points
+            are used and this is typically related to the mode frequency by
+            neutron instrument parameters.
+        bins:
+            Energy or frequency bins used as x_data in resulting spectra
+        apply_cross_section:
+            Multiply each atom/isotope spectrum by a corresponding total
+            neutron scattering cross-section (σ_tot).
+        include_dw:
+            Multiply each spectrum by Debye-Waller factor; this is calculated
+            from atomic_displacements and follows nominal_q2.
 
+    Returns:
+        binned spectra of contribution from each nucleus
+    """
     intensities = calculate_isotropic_incoherent_fundamentals(
         modes=modes,
         mode_displacements=mode_displacements.n_plus_one,
@@ -176,7 +214,7 @@ def q_scaling_isotropic_incoherent_spectra(
     nominal_q2: Quantity,
     bins: Quantity,
 ) -> Spectrum1DCollection:
-    """Calculate INS intensities in fully-isotropic incoherent approximation
+    """Calculate INS intensities in fully-isotropic incoherent approximation.
 
     Note that to give expected results, mode_displacements should have N+1 Bose
     occupation and atomic_displacements should have 2N+1 occupation.
@@ -188,8 +226,23 @@ def q_scaling_isotropic_incoherent_spectra(
     energy-Q^2 relationship can be determined using
     abinslib.utils.calculate_indirect_q2.
 
-    """
+    Args:
+        modes: phonon frequency and eigenvector dataset
+        mode_displacements: phonon mode displacement dataset
+            (This can be obtained using :func:`Displacements.from_modes(modes)`.)
+        atomic_displacements: thermal average atomic displacements indexed
+            (atom, direction, direction)
+        nominal_q2:
+            Scalar Q^2 values corresponding to output bin centers.
+        bins:
+            Energy or frequency bins used as x_data in resulting spectra
+        apply_cross_section:
+            Multiply each atom/isotope spectrum by a corresponding total
+            neutron scattering cross-section (σ_tot).
 
+    Returns:
+        binned spectra of contribution from each nucleus
+    """
     # Input should have a Q^2 per output bin center
     assert nominal_q2.shape == bins[:-1].shape
 
