@@ -4,6 +4,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
 import importlib.metadata
+
 release = importlib.metadata.version("abinslib")
 
 # -- Project information -----------------------------------------------------
