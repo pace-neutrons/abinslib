@@ -26,7 +26,7 @@ def ase_from_phonopy(phonopy_atoms: PhonopyAtoms) -> Atoms:
         phonopy_atoms.symbols,
         cell=phonopy_atoms.cell,
         scaled_positions=phonopy_atoms.scaled_positions,
-        pbc=True,
+        pbc=True,  # periodic boundary conditions
     )
 
 
