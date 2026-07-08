@@ -10,8 +10,10 @@ requires-python = ">=3.11"
 dependencies = [
     "euphonic >= 2.0.0,<3",
     "resins == 0.1.0",
-    "pooch == 1.9.0",  # Should make this optional, really
 ]
+
+[project.optional-dependencies]
+tutorial = ["pooch ~= 1.9"]
 
 [dependency-groups]
 test = [
