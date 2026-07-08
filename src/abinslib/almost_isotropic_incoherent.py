@@ -332,7 +332,7 @@ def q_scaling_almost_isotropic_incoherent_combination_spectra(
         "method": "almost-isotropic incoherent approximation",
         "cross sections": ("incoherent + coherent" if apply_cross_section else "none"),
         "line_data": [
-            {"atom_index": i, "atom_symbol": symbol, "quantum_order": 1}
+            {"atom_index": i, "atom_symbol": symbol, "quantum_order": 2}
             for i, symbol in enumerate(modes.crystal.atom_type)
         ],
     }
