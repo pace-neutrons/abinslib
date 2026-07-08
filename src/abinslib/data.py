@@ -10,6 +10,8 @@ if TYPE_CHECKING:
 
 
 def _setup_ref_data() -> Pooch:
+    import pooch
+
     return pooch.create(
         path=pooch.os_cache("abinslib"),
         # Currently this location is overridden by the only file in registry.
@@ -39,16 +41,19 @@ def get_data(filename: str) -> Path:
         msg = (
             "Could not construct reference data collection. Ensure 'pooch' was"
             " installed, e.g. with 'pip install abinslib[tutorials]'."
-            )
+        )
         raise ImportError(msg)
 
     return Path(_EUPHONIC_TEST_DATA.fetch(filename))
 
 
-try:
-    import pooch  # noqa: F401
+def _ref_data_or_none() -> Pooch | None:
+    try:
+        import pooch  # noqa: F401
+    except ImportError:
+        return None
 
-    _EUPHONIC_TEST_DATA: Pooch | None = _setup_ref_data()
+    return _setup_ref_data()
 
-except ImportError:
-    _EUPHONIC_TEST_DATA = None
+
+_EUPHONIC_TEST_DATA: Pooch | None = _ref_data_or_none()
