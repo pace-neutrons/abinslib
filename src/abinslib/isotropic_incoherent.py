@@ -16,22 +16,8 @@ if TYPE_CHECKING:
 
 
 def _get_total_cross_sections(crystal: Crystal) -> Quantity:
-    from euphonic.util import get_reference_data
-
-    xs_coh_data = get_reference_data(
-        collection="BlueBook", physical_property="coherent_cross_section"
-    )
-    xs_inc_data = get_reference_data(
-        collection="BlueBook", physical_property="incoherent_cross_section"
-    )
-    return Quantity(
-        [
-            xs_coh_data[symbol].to("barn").magnitude
-            + xs_inc_data[symbol].to("barn").magnitude
-            for symbol in crystal.atom_type
-        ],
-        "barn",
-    )
+    from euphonic.isotopes import sears_1992
+    return sears_1992.get_array(crystal, "scattering_cross_section")
 
 
 def calculate_isotropic_incoherent_fundamentals(
