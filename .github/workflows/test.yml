@@ -26,7 +26,7 @@ jobs:
       - name: Install package and testing requirements
         shell: bash -el {0}
         run: |
-          pip install . --group test
+          pip install .[tutorial] --group test
 
       - name: Test with pytest
         if: ${{ matrix.python_version == '3.11' }}
