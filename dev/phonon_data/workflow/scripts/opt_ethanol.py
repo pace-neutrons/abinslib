@@ -10,7 +10,14 @@ from upet.calculator import UPETCalculator
 
 
 def opt_ethanol(calc: UPETCalculator, traj: Path) -> Atoms:
-    """Get initial structure from ASE and optimize with Calculator."""
+    """Get initial structure from ASE and optimize with Calculator.
+
+    This should be a "PET-MAD" model from https://pypi.org/project/upet/.
+    These are general-purpose "foundation models" and won't give exact
+    agreement with experiment (or even DFT)... but should be broadly physical
+    and good enough for testing phonon methods.
+    """
+
     # Make periodic cell for consistent phonon approach later
     atoms = ase.build.molecule("CH3CH2OH", vacuum=6.0, pbc=True)
     atoms.calc = calc
