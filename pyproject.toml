@@ -12,6 +12,9 @@ dependencies = [
     "resins == 0.1.0",
 ]
 
+[project.optional-dependencies]
+tutorial = ["pooch ~= 1.9"]
+
 [dependency-groups]
 test = [
     "pytest>=9.0,<10.0",
@@ -26,6 +29,7 @@ doc = [
     "sphinx-gallery~=0.21.0",
     "myst-parser~=5.1.0",
     "matplotlib~=3.11.0",
+    "pooch ~= 1.9",
 ]
 dev = [
     {include-group = 'test'},
@@ -88,7 +92,11 @@ extend-ignore-names = [
 [tool.ruff.lint.per-file-ignores]
 # Ease docstring requirements for unit tests and workflows
 "tests/*" = ["D", "DOC"]
-"docs/source/tutorials/*" = ["D", "DOC"]
+"docs/source/tutorials/*" = [
+    "D",
+    "DOC",
+    "E402",  # Allow python import closer to first use in tutorial
+    ]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
