@@ -29,6 +29,7 @@ doc = [
     "sphinx-gallery~=0.21.0",
     "myst-parser~=5.1.0",
     "matplotlib~=3.11.0",
+    "pooch ~= 1.9",
 ]
 dev = [
     {include-group = 'test'},
