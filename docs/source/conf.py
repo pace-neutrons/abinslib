@@ -54,6 +54,7 @@ autodoc_typehints = "signature"
 sphinx_gallery_conf = {
     "examples_dirs": "tutorials",
     "gallery_dirs": "auto_examples",
+    "remove_config_comments": True,
 }
 
 # -- Napoleon options --------------------------------------------------------
