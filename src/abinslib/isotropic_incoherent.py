@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 
 def _get_total_cross_sections(crystal: Crystal) -> Quantity:
     from euphonic.isotopes import sears_1992
+
     return sears_1992.get_array(crystal, "scattering_cross_section")
 
 
