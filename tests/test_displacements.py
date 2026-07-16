@@ -71,7 +71,7 @@ def test_calculate_adp(modes, abins_average_a_traces):
 
 
 @pytest.mark.parametrize(
-    ("modes", "temperature_k"), product(["GaSb"], [0, 100]), indirect=("modes",)
+    ("modes", "temperature_k"), list(product(["GaSb"], [0, 100])), indirect=("modes",)
 )
 def test_dw_regression(modes, temperature_k, ndarrays_regression):
     dw = Displacements.from_modes(
